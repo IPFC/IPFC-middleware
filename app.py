@@ -157,7 +157,7 @@ def login():
 
     # verified path
     if bcrypt.checkpw(auth.password.encode('utf8'), user.password_hash.encode('utf8')):
-        token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)},
+        token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=3)},
                            app.config['SECRET_KEY'])
         # Get user collection
         user_collection = UserCollections.query.filter_by(user_id=user.user_id).first()
