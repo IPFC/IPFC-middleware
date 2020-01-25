@@ -56,12 +56,14 @@ class UserCollections(db.Model):
     user_id = db.Column(VARCHAR, primary_key=True)
     sr_id = db.Column(VARCHAR)
     deck_ids = db.Column(JSONB)
+    deleted_deck_ids = db.Column(JSONB)
     all_deck_cids = db.Column(JSONB)
 
     def __init__(self, user_id, sr_id, deck_ids, all_deck_cids):
         self.user_id = user_id
         self.sr_id = sr_id
         self.deck_ids = deck_ids
+        self.deleted_deck_ids = deleted_deck_ids
         self.all_deck_cids = all_deck_cids
 
 
@@ -147,8 +149,10 @@ def sign_up():
 
         new_collection = UserCollections(user_id=user_id,
                                          sr_id=str(uuid.uuid4()),
-                                         all_deck_cids=[],
-                                         deck_ids=[],)
+                                         deck_ids=[],
+                                         deleted_deck_ids=[],
+                                         all_deck_cids=[]
+                                         )
         db.session.add(new_collection)
         db.session.commit()
         return jsonify({'message': 'New user created!'})
@@ -227,8 +231,10 @@ def post_user_collection(current_user):
 
     new_collection = UserCollections(user_id=current_user.user_id,
                                      sr_id=str(uuid.uuid4()),
-                                     all_deck_cids=data['all_deck_cids'],
-                                     deck_ids=data['deck_ids'])
+                                     deck_ids=data['deck_ids'],
+                                     deleted_deck_ids=data['deleted_deck_ids'],
+                                     all_deck_cids=data['all_deck_cids']
+                                     )
     db.session.add(new_collection)
     db.session.commit()
 
@@ -239,7 +245,7 @@ def post_user_collection(current_user):
 @cross_origin(origin='*')
 @token_required
 def get_user_collection(current_user):
-
+    # check pinata here
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     return user_collection_schema.dump(user_collection)
 
@@ -254,6 +260,8 @@ def put_user_collection(current_user):
         user_collection.sr_id = data['sr_id']
     if 'deck_ids' in data:
         user_collection.deck_ids = data['deck_ids']
+    if 'deleted_deck_ids' in data:
+        user_collection.deleted_deck_ids = data['deleted_deck_ids']
     if 'all_deck_cids' in data:
         user_collection.all_deck_cids = data['all_deck_cids']
 
@@ -383,7 +391,9 @@ def delete_deck(current_user):
 
     if not deck:
         return jsonify({'message': 'No deck found!'})
-
+    
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    
     db.session.delete(deck)
     db.session.commit()
 
