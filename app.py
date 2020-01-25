@@ -90,7 +90,7 @@ class Decks(db.Model):
 
 class UserCollectionsSchema(ma.Schema):
     class Meta:
-        fields = ("user_id", "sr_id", "deck_ids", "all_deck_cids")
+        fields = ("user_id", "sr_id", "deck_ids", "all_deck_cids", "deleted_deck_ids")
 
 
 class DecksSchema(ma.Schema):
@@ -393,7 +393,7 @@ def delete_deck(current_user):
         return jsonify({'message': 'No deck found!'})
     
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-    
+
     db.session.delete(deck)
     db.session.commit()
 
