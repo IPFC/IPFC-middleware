@@ -394,7 +394,7 @@ def delete_deck(current_user):
     
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     user_collection.deck_ids.remove(data['deck_id'])
-    
+
     db.session.delete(deck)
     db.session.commit()
 
@@ -420,8 +420,8 @@ def get_deck_meta(current_user):
 @cross_origin(origin='*')
 @token_required
 def get_decks_meta(current_user):
-    data = request.get_json()
-    deck_ids = data['deck_ids']
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    deck_ids = user_collection['deck_ids']
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
