@@ -393,7 +393,8 @@ def delete_deck(current_user):
         return jsonify({'message': 'No deck found!'})
     
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-
+    user_collection.deck_ids.remove(data['deck_id'])
+    
     db.session.delete(deck)
     db.session.commit()
 
