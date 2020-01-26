@@ -542,7 +542,7 @@ def get_deck_meta(current_user):
 @token_required
 def get_decks_meta(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-    deck_ids = user_collection['deck_ids']
+    deck_ids = user_collection.deck_ids
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
