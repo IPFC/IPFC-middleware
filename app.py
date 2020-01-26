@@ -299,12 +299,16 @@ def get_decks(current_user):
 @token_required
 def post_deck(current_user):
     client_deck = request.get_json()
-    exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
+    exists_in_decks = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    if client_deck['deck_id'] not in user_collection.deck_ids:
+        user_collection.deck_ids.append(client_deck['deck_id'])
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
                           "pinata_secret_api_key": pinata_key}
-    if exists is not None:
+
+    if exists_in_decks is not None:
         return jsonify({"error": "Deck already exists"})
     else:
         new_deck = Decks(
@@ -316,6 +320,7 @@ def post_deck(current_user):
             deck_cid=""
             )
         db.session.add(new_deck)
+
         db.session.commit()
         json_data_for_API = {}
         json_data_for_API["pinataMetadata"] = {
@@ -339,10 +344,12 @@ def post_decks(current_user):
     client_decks = request.get_json()
     decks_added = []
     decks_not_added = []
-    print(client_decks)
-    sys.stdout.flush()
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+  
 
     for client_deck in client_decks:
+        if client_deck['deck_id'] not in user_collection.deck_ids:
+            user_collection.deck_ids.append(client_deck['deck_id'])
         exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
         pinata_api = current_user.pinata_api
         pinata_key = current_user.pinata_key
