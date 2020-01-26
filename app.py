@@ -284,7 +284,7 @@ def get_deck(current_user):
 @token_required
 def get_decks(current_user):
     data = request.get_json()
-    deck_ids = data['deck_ids']
+    deck_ids = data
     decks = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
@@ -297,8 +297,8 @@ def get_decks(current_user):
 @cross_origin(origin='*')
 @token_required
 def post_deck(current_user):
-    data = request.get_json()
-    exists = Decks.query.filter_by(deck_id=data['deck_id']).first()
+    client_deck = request.get_json()
+    exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
@@ -307,13 +307,15 @@ def post_deck(current_user):
         return jsonify({"error": "Deck already exists"})
     else:
         new_deck = Decks(
-            deck=data['deck'],
+            deck=client_deck,
             # these echo 'deck' internal info to allow for less expensive database metadata queries
-            deck_id=data['deck_id'],
-            title=data['title'],
-            edited=data['edited'],
+            deck_id=client_deck['deck_id'],
+            title=client_deck['title'],
+            edited=client_deck['edited'],
             deck_cid=""
             )
+        db.session.add(new_deck)
+        db.session.commit()
         json_data_for_API = {}
         json_data_for_API["pinataMetadata"] = {
             "name": new_deck.title,
@@ -326,18 +328,58 @@ def post_deck(current_user):
         sys.stdout.flush()
         deck_cid = pinata_api_response["IpfsHash"]
         new_deck.deck_cid = deck_cid
-        db.session.add(new_deck)
         db.session.commit()
         return deck_schema.dump(new_deck)
 
+@app.route('/post_decks', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def post_decks(current_user):
+    client_decks = request.get_json()
+    decks_added = []
+    decks_not_added = []
+    for client_deck in client_decks:
+        exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
+        pinata_api = current_user.pinata_api
+        pinata_key = current_user.pinata_key
+        pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
+                            "pinata_secret_api_key": pinata_key}
+        if exists is not None:
+            decks_not_added.append(client_deck['title'])
+        else:
+            new_deck = Decks(
+                deck=client_deck,
+                # these echo 'deck' internal info to allow for less expensive database metadata queries
+                deck_id=client_deck['deck_id'],
+                title=client_deck['title'],
+                edited=client_deck['edited'],
+                deck_cid=""
+                )
+            db.session.add(new_deck)
+            db.session.commit()
+            json_data_for_API = {}
+            json_data_for_API["pinataMetadata"] = {
+                "name": new_deck.title,
+                "keyvalues": {"deck_id": new_deck.deck_id, "edited": new_deck.edited}
+                }
+            json_data_for_API["pinataContent"] = deck_schema.dump(new_deck)
+            req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+            pinata_api_response = json.loads(req.text)
+            print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            sys.stdout.flush()
+            deck_cid = pinata_api_response["IpfsHash"]
+            new_deck.deck_cid = deck_cid
+            db.session.commit()
+            decks_added.append(client_deck['title'])
+    
+    return jsonify({'decks_added': decks_added, 'decks_not_added': decks_not_added})
 
 @app.route('/put_deck', methods=['PUT'])
 @cross_origin(origin='*')
 @token_required
 def put_deck(current_user):
-    data = request.get_json()
-    deck_id = data['deck_id']
-    deck_to_update = Decks.query.filter_by(deck_id=deck_id).first()
+    client_deck = request.get_json()
+    server_deck = Decks.query.filter_by(deck_id=deck_id).first()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
@@ -346,42 +388,96 @@ def put_deck(current_user):
     # query_string = '?metadata[keyvalues]={"deck_id":{"value":"' + data['deck_id'] + '","op":"eq"}}'
     # req = requests.get(pinata_pin_list + query_string, headers=pinata_api_headers)
     # pinata_data = json.loads(req.text)
-    # if pinata_data['edited'] > deck_to_update.edited and pinata_data['edited'] > data['edited']:
-        # deck_to_update... = pinata_data['...']
+    # if pinata_data['edited'] > server_deck.edited and pinata_data['edited'] > data['edited']:
+        # server_deck... = pinata_data['...']
         # db.session.commit()
 
     # this check should've already been performed in app, but its not too expensive
     # check edited date isn't older than one in database, if it is, return newest
-    if data['edited'] > deck_to_update.edited: # and data['edited'] > pinata_data['edited']:
-        if 'deck' in data:
-            deck_to_update.deck = data['deck']
-        if 'title' in data:
-            deck_to_update.title = data['title']
-        if 'edited' in data:
-            deck_to_update.edited = data['edited']
-        if 'deck_cid' in data:
-            deck_to_update.deck_cid = data['deck_cid']
+    if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+        server_deck.deck = client_deck
+        server_deck.title = client_deck['title']
+        server_deck.edited = client_deck['edited']
         db.session.commit()
-        return jsonify({'message': 'Up to date'})
-    # else return the database version saved as deck_to_update
 
-    # then if the pinata version wasn't the newest, upload to pinata
-    # if pinata_data['edited'] < deck_to_update.edited or pinata_data['edited'] < data['edited']:
-    json_data_for_API = {}
-    json_data_for_API["pinataMetadata"] = {
-        "name": deck_to_update.title,
-        "keyvalues": {"deck_id": deck_to_update.deck_id, "edited": deck_to_update.edited}
-        }
-    json_data_for_API["pinataContent"] = deck_schema.dump(deck_to_update)
-    req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
-    pinata_api_response = json.loads(req.text)
-    print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
-    sys.stdout.flush()
-    deck_cid = pinata_api_response["IpfsHash"]
-    deck_to_update.deck_cid = deck_cid
-    db.session.commit()
+        # then if the pinata version wasn't the newest, upload to pinata
 
-    return deck_schema.dump(deck_to_update)
+        # change this when add pinata
+
+        # if pinata_data['edited'] < server_deck.edited or pinata_data['edited'] < data['edited']:
+        json_data_for_API = {}
+        json_data_for_API["pinataMetadata"] = {
+            "name": server_deck.title,
+            "keyvalues": {"deck_id": server_deck.deck_id, "edited": server_deck.edited}
+            }
+        json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
+        req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+        pinata_api_response = json.loads(req.text)
+        print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+        sys.stdout.flush()
+        server_deck.deck_cid = pinata_api_response["IpfsHash"]
+        db.session.commit()
+        return jsonify({'message': 'Deck updated', 'deck': deck_schema.dump(server_deck)}) 
+
+    # else return the database version saved as server_deck
+    else:                                                      #do we need the dump? compare with put_decks
+        return jsonify({'message': 'Server decks is newer', 'deck': deck_schema.dump(server_deck)}) 
+
+
+@app.route('/put_decks', methods=['PUT'])
+@cross_origin(origin='*')
+@token_required
+def put_decks(current_user):
+    pinata_api = current_user.pinata_api
+    pinata_key = current_user.pinata_key
+    pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
+                            "pinata_secret_api_key": pinata_key}
+    updated_decks = []
+    not_updated_decks = []
+    data = request.get_json()
+    client_decks = data['decks']
+    for client_deck in deck_ids:
+        server_deck = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
+
+        # Check IPFS metadata here-------
+        # query_string = '?metadata[keyvalues]={"deck_id":{"value":"' + data['deck_id'] + '","op":"eq"}}'
+        # req = requests.get(pinata_pin_list + query_string, headers=pinata_api_headers)
+        # pinata_data = json.loads(req.text)
+        # if pinata_data['edited'] > server_deck.edited and pinata_data['edited'] > data['edited']:
+            # server_deck... = pinata_data['...']
+            # db.session.commit()
+
+        # this check should've already been performed in app, but its not too expensive
+        # check edited date isn't older than one in database, if it is, return newest
+        if data['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+            server_deck.deck = client_deck
+            server_deck.title = client_deck['title']
+            server_deck.edited = client_deck['edited']
+            db.session.commit()
+
+            # then if the pinata version wasn't the newest, upload to pinata
+
+            # change this when add pinata
+
+            # if pinata_data['edited'] < server_deck.edited or pinata_data['edited'] < data['edited']:
+            json_data_for_API = {}
+            json_data_for_API["pinataMetadata"] = {
+                "name": server_deck.title,
+                "keyvalues": {"deck_id": server_deck.deck_id, "edited": server_deck.edited}
+                }
+            json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
+            req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+            pinata_api_response = json.loads(req.text)
+            print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            sys.stdout.flush()
+            server_deck.deck_cid = pinata_api_response["IpfsHash"]
+            db.session.commit()
+            updated_decks.append(server_deck)
+        # else return the database version saved as server_deck
+        else:
+            not_updated_decks.append(server_deck)
+
+    return jsonify({"updated decks": updated_decks, "not updated decks": not_updated_decks})
 
 @app.route('/delete_deck', methods=['DELETE'])
 @cross_origin(origin='*')
