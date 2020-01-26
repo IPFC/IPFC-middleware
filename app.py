@@ -342,9 +342,6 @@ def post_deck(current_user):
 @token_required
 def post_decks(current_user):
     client_decks = request.get_json()
-    print("    client_decks",client_decks)
-    sys.stdout.flush()
-
     decks_added = []
     decks_not_added = []
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
@@ -354,7 +351,9 @@ def post_decks(current_user):
             sys.stdout.flush()
             print("    client_deck['deck_id']",client_deck['deck_id'])
             sys.stdout.flush()
-            user_collection.deck_ids.append(client_deck['deck_id'])
+            deck_ids_list = user_collection.deck_ids
+            deck_ids_list.append(client_deck['deck_id'])
+            user_collection.deck_ids = deck_ids_list
             db.session.commit()
             print("    user_collection.deck_ids",user_collection.deck_ids)
             sys.stdout.flush()
