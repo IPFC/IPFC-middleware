@@ -408,7 +408,7 @@ def delete_deck(current_user):
 def delete_decks(current_user):
     reply_message = {'message': ''}
     data = request.get_json()
-    for deck_id in data['deck_ids']
+    for deck_id in data['deck_ids']:
         deck = Decks.query.filter_by(deck_id=deck_id).first()
         if not deck:
             reply_message['message'] += '    No deck found!: ' + deck_id
