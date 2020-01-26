@@ -514,8 +514,10 @@ def delete_decks(current_user):
             reply_message['message'] += '    No deck found!: ' + deck_id
         else:
             user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-            user_collection.deck_ids.remove(deck_id)
-            user_collection.deleted_deck_ids.append(deck_id)
+            if deck_id in user_collection.deck_ids:
+                user_collection.deck_ids.remove(deck_id)
+            if deck_id not in user_collection.deleted_deck_ids:    
+                user_collection.deleted_deck_ids.append(deck_id)
 
             db.session.delete(deck)
             db.session.commit()
