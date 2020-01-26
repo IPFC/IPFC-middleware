@@ -350,6 +350,7 @@ def post_decks(current_user):
     for client_deck in client_decks:
         if client_deck['deck_id'] not in user_collection.deck_ids:
             user_collection.deck_ids.append(client_deck['deck_id'])
+            db.session.commit()
         exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
         pinata_api = current_user.pinata_api
         pinata_key = current_user.pinata_key
@@ -357,7 +358,6 @@ def post_decks(current_user):
                             "pinata_secret_api_key": pinata_key}
         if exists is not None:
             decks_not_added.append(client_deck['title'])
-            db.session.commit()
         else:
             new_deck = Decks(
                 deck=client_deck,
