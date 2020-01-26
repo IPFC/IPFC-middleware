@@ -187,8 +187,6 @@ def login():
         decks_meta = []
         for deck_id in deck_ids:
             dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-            print("Deck dump ", dump)
-
             if dump is not None and dump is not {}:
                 deck_meta = {
                     'title': dump['title'],
