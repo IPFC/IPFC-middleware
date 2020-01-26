@@ -161,7 +161,7 @@ def sign_up():
 @app.route('/login')
 # @cross_origin(origin='*')
 def login():
-    print("starting login" + str(datetime.datetime.utcnow()))
+    print("starting login " + str(datetime.datetime.utcnow()))
     sys.stdout.flush()
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
@@ -176,17 +176,19 @@ def login():
         token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=3)},
                            app.config['SECRET_KEY'])
         # Get user collection
-        print("Getting user collection" + str(datetime.datetime.utcnow()))
+        print("Getting user collection " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         user_collection = UserCollections.query.filter_by(user_id=user.user_id).first()
 
         # Get decks metadata
-        print("Getting decks meta" + str(datetime.datetime.utcnow()))
+        print("Getting decks meta " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         deck_ids = user_collection.deck_ids
         decks_meta = []
         for deck_id in deck_ids:
             dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
+            print("Deck dump ", dump)
+
             if dump is not None:
                 deck_meta = {
                     'title': dump['title'],
