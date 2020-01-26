@@ -302,7 +302,9 @@ def post_deck(current_user):
     exists_in_decks = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     if client_deck['deck_id'] not in user_collection.deck_ids:
-        user_collection.deck_ids.append(client_deck['deck_id'])
+        deck_ids_list = user_collection.deck_ids.copy()
+        deck_ids_list.append(client_deck['deck_id'])
+        user_collection.deck_ids = deck_ids_list
         db.session.commit()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
@@ -347,20 +349,11 @@ def post_decks(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     for client_deck in client_decks:
         if client_deck['deck_id'] not in user_collection.deck_ids:
-            print("    user_collection.deck_ids",user_collection.deck_ids)
-            sys.stdout.flush()
-            print("    client_deck['deck_id']",client_deck['deck_id'])
-            sys.stdout.flush()
             # aparently you can't directly append a list in SQLalchemy
             deck_ids_list = user_collection.deck_ids.copy()
             deck_ids_list.append(client_deck['deck_id'])
-            print("    deck_ids_list", deck_ids_list)
-            sys.stdout.flush()
             user_collection.deck_ids = deck_ids_list
             db.session.commit()
-            print("    user_collection.deck_ids",user_collection.deck_ids)
-            sys.stdout.flush()
-
         exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
         pinata_api = current_user.pinata_api
         pinata_key = current_user.pinata_key
@@ -506,14 +499,22 @@ def put_decks(current_user):
 @token_required
 def delete_deck(current_user):
     data = request.get_json()
-    deck = Decks.query.filter_by(deck_id=data['deck_id']).first()
+    deck_id = data['deck_id']
+    deck = Decks.query.filter_by(deck_id=deck_id).first()
 
     if not deck:
         return jsonify({'message': 'No deck found!'})
 
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-    user_collection.deck_ids.remove(data['deck_id'])
-    user_collection.deleted_deck_ids.append(data['deck_id'])
+    if deck_id in user_collection.deck_ids:
+            deck_ids_list = user_collection.deck_ids.copy()
+            deck_ids_list.remove(deck_id)
+            user_collection.deck_ids = deck_ids_list
+        if deck_id not in user_collection.deleted_deck_ids:
+            deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+            deleted_deck_ids_list.append(deck_id)
+            user_collection.deleted_deck_ids = deleted_deck_ids_list    
+
 
     db.session.delete(deck)
     db.session.commit()
@@ -533,9 +534,13 @@ def delete_decks(current_user):
         else:
             user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
             if deck_id in user_collection.deck_ids:
-                user_collection.deck_ids.remove(deck_id)
-            if deck_id not in user_collection.deleted_deck_ids:    
-                user_collection.deleted_deck_ids.append(deck_id)
+                deck_ids_list = user_collection.deck_ids.copy()
+                deck_ids_list.remove(deck_id)
+                user_collection.deck_ids = deck_ids_list
+            if deck_id not in user_collection.deleted_deck_ids:
+                deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+                deleted_deck_ids_list.append(deck_id)
+                user_collection.deleted_deck_ids = deleted_deck_ids_list    
 
             db.session.delete(deck)
             db.session.commit()
