@@ -303,6 +303,7 @@ def post_deck(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     if client_deck['deck_id'] not in user_collection.deck_ids:
         user_collection.deck_ids.append(client_deck['deck_id'])
+        db.session.commit()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
@@ -320,7 +321,6 @@ def post_deck(current_user):
             deck_cid=""
             )
         db.session.add(new_deck)
-
         db.session.commit()
         json_data_for_API = {}
         json_data_for_API["pinataMetadata"] = {
@@ -357,6 +357,7 @@ def post_decks(current_user):
                             "pinata_secret_api_key": pinata_key}
         if exists is not None:
             decks_not_added.append(client_deck['title'])
+            db.session.commit()
         else:
             new_deck = Decks(
                 deck=client_deck,
