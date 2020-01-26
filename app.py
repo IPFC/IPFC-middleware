@@ -351,8 +351,11 @@ def post_decks(current_user):
             sys.stdout.flush()
             print("    client_deck['deck_id']",client_deck['deck_id'])
             sys.stdout.flush()
-            deck_ids_list = user_collection.deck_ids
+            # aparently you can't directly append a list in SQLalchemy
+            deck_ids_list = user_collection.deck_ids.copy()
             deck_ids_list.append(client_deck['deck_id'])
+            print("    deck_ids_list", deck_ids_list])
+            sys.stdout.flush()
             user_collection.deck_ids = deck_ids_list
             db.session.commit()
             print("    user_collection.deck_ids",user_collection.deck_ids)
