@@ -342,15 +342,23 @@ def post_deck(current_user):
 @token_required
 def post_decks(current_user):
     client_decks = request.get_json()
+    print("    client_decks",client_decks)
+    sys.stdout.flush()
+
     decks_added = []
     decks_not_added = []
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-  
-
     for client_deck in client_decks:
         if client_deck['deck_id'] not in user_collection.deck_ids:
+            print("    user_collection.deck_ids",user_collection.deck_ids)
+            sys.stdout.flush()
+            print("    client_deck['deck_id']",client_deck['deck_id'])
+            sys.stdout.flush()
             user_collection.deck_ids.append(client_deck['deck_id'])
             db.session.commit()
+            print("    user_collection.deck_ids",user_collection.deck_ids)
+            sys.stdout.flush()
+
         exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
         pinata_api = current_user.pinata_api
         pinata_key = current_user.pinata_key
@@ -377,7 +385,7 @@ def post_decks(current_user):
             json_data_for_API["pinataContent"] = deck_schema.dump(new_deck)
             req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             deck_cid = pinata_api_response["IpfsHash"]
             new_deck.deck_cid = deck_cid
