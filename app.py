@@ -350,6 +350,7 @@ def put_deck(current_user):
         # deck_to_update... = pinata_data['...']
         # db.session.commit()
 
+    # this check should've already been performed in app, but its not too expensive
     # check edited date isn't older than one in database, if it is, return newest
     if data['edited'] > deck_to_update.edited: # and data['edited'] > pinata_data['edited']:
         if 'deck' in data:
@@ -391,14 +392,37 @@ def delete_deck(current_user):
 
     if not deck:
         return jsonify({'message': 'No deck found!'})
-    
+
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     user_collection.deck_ids.remove(data['deck_id'])
+    user_collection.deleted_deck_ids.append(data['deck_id'])
 
     db.session.delete(deck)
     db.session.commit()
 
     return jsonify({'message': 'Deck deleted!'})
+
+@app.route('/delete_decks', methods=['DELETE'])
+@cross_origin(origin='*')
+@token_required
+def delete_decks(current_user):
+    reply_message = {'message': ''}
+    data = request.get_json()
+    for deck_id in data['deck_ids']
+        deck = Decks.query.filter_by(deck_id=deck_id).first()
+        if not deck:
+            reply_message['message'] += '    No deck found!: ' + deck_id
+        else:
+            user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+            user_collection.deck_ids.remove(deck_id)
+            user_collection.deleted_deck_ids.append(deck_id)
+
+            db.session.delete(deck)
+            db.session.commit()
+
+            reply_message['message'] += '    Deck Deleted!: ' + deck_id
+
+    return jsonify(reply_message)
 
 @app.route('/get_deck_meta', methods=['GET'])
 @cross_origin(origin='*')
