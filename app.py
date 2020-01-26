@@ -23,6 +23,7 @@ import sys # Used to make print statements, add a line after print statement:
 
 app = Flask(__name__)
 ma = Marshmallow(app)
+CORS(app)
 
 
 app.config['DEBUG'] = True
@@ -30,7 +31,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-CORS(app)
 pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
 
@@ -159,7 +159,7 @@ def sign_up():
 
 
 @app.route('/login')
-@cross_origin(origin='*')
+# @cross_origin(origin='*')
 def login():
     print("starting login" + str(datetime.datetime.utcnow()))
     sys.stdout.flush()
