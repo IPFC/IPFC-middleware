@@ -269,7 +269,7 @@ def put_user_collection(current_user):
     return user_collection_schema.dump(user_collection)
 
 
-@app.route('/get_deck', methods=['GET'])
+@app.route('/get_deck', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
 def get_deck(current_user):
@@ -279,7 +279,7 @@ def get_deck(current_user):
     return dump['deck']
 
 
-@app.route('/get_decks', methods=['GET'])
+@app.route('/get_decks', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
 def get_decks(current_user):
@@ -520,7 +520,7 @@ def delete_decks(current_user):
 
     return jsonify(reply_message)
 
-@app.route('/get_deck_meta', methods=['GET'])
+@app.route('/get_deck_meta', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
 def get_deck_meta(current_user):
