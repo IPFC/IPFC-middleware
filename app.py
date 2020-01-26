@@ -340,7 +340,7 @@ def post_decks(current_user):
     decks_added = []
     decks_not_added = []
     print(client_decks)
-                sys.stdout.flush()
+    sys.stdout.flush()
 
     for client_deck in client_decks:
         exists = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
