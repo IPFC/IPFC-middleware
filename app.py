@@ -59,7 +59,7 @@ class UserCollections(db.Model):
     deleted_deck_ids = db.Column(JSONB)
     all_deck_cids = db.Column(JSONB)
 
-    def __init__(self, user_id, sr_id, deck_ids, all_deck_cids):
+    def __init__(self, user_id, sr_id, deck_ids, deleted_deck_ids, all_deck_cids):
         self.user_id = user_id
         self.sr_id = sr_id
         self.deck_ids = deck_ids
@@ -187,13 +187,14 @@ def login():
         decks_meta = []
         for deck_id in deck_ids:
             dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-            deck_meta = {
-                'title': dump['title'],
-                'edited': dump['edited'],
-                'deck_cid': dump['deck_cid'],
-                'deck_id': dump['deck_id']
-            }
-            decks_meta.append(deck_meta)
+            if dump is not None:
+                deck_meta = {
+                    'title': dump['title'],
+                    'edited': dump['edited'],
+                    'deck_cid': dump['deck_cid'],
+                    'deck_id': dump['deck_id']
+                }
+                decks_meta.append(deck_meta)
 
         decks = []
         print("Getting decks" + str(datetime.datetime.utcnow()))
@@ -379,7 +380,7 @@ def post_decks(current_user):
 @token_required
 def put_deck(current_user):
     client_deck = request.get_json()
-    server_deck = Decks.query.filter_by(deck_id=deck_id).first()
+    server_deck = Decks.query.filter_by(deck_id=[client_deck['deck_id']]).first()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
