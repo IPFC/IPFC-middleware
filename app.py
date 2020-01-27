@@ -479,9 +479,12 @@ def put_decks(current_user):
         # this check should've already been performed in app, but its not too expensive
         # check edited date isn't older than one in database, if it is, return newest
         if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
-            server_deck.deck = client_deck
-            server_deck.title = client_deck['title']
-            server_deck.edited = client_deck['edited']
+            server_deck.update({
+                server_deck.deck: client_deck,
+                server_deck.title: client_deck['title'],
+                server_deck.edited: client_deck['edited'] 
+            }, synchronize_session = False)
+        
             db.session.commit()
 
             # then if the pinata version wasn't the newest, upload to pinata
