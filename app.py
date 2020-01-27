@@ -161,7 +161,7 @@ def sign_up():
 @app.route('/login')
 # @cross_origin(origin='*')
 def login():
-    print("starting login " + str(datetime.datetime.utcnow()))
+    print("    starting login " + str(datetime.datetime.utcnow()))
     sys.stdout.flush()
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
@@ -176,12 +176,12 @@ def login():
         token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=3)},
                            app.config['SECRET_KEY'])
         # Get user collection
-        print("Getting user collection " + str(datetime.datetime.utcnow()))
+        print("    Getting user collection " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         user_collection = UserCollections.query.filter_by(user_id=user.user_id).first()
 
         # Get decks metadata
-        print("Getting decks meta " + str(datetime.datetime.utcnow()))
+        print("    Getting decks meta " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         deck_ids = user_collection.deck_ids
         decks_meta = []
@@ -198,6 +198,7 @@ def login():
                 decks_meta.append(deck_meta)
             # delete blank or incomplete decks    
             else:
+                db.session.delete(deck)                
                 if deck_id in user_collection.deck_ids:
                     deck_ids_list = user_collection.deck_ids.copy()
                     deck_ids_list.remove(deck_id)
@@ -205,12 +206,11 @@ def login():
                 if deck_id not in user_collection.deleted_deck_ids:
                     deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
                     deleted_deck_ids_list.append(deck_id)
-                    user_collection.deleted_deck_ids = deleted_deck_ids_list    
-                db.session.delete(deck)
+                    user_collection.deleted_deck_ids = deleted_deck_ids_list  
                 db.session.commit()
 
         decks = []
-        print("Getting decks" + str(datetime.datetime.utcnow()))
+        print("    Getting decks" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         # Preload up to 10 decks here..... just get them all, up to 100? do speed tests to decide
         # Realized we can't create the review deck without all the decks. 
@@ -229,7 +229,7 @@ def login():
                              'token': token.decode('UTF-8'),
                              'decks_meta': decks_meta,
                              'decks': decks}
-        print("returning" + str(datetime.datetime.utcnow()))
+        print("    returning" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         return jsonify(login_return_data)
 
@@ -517,8 +517,9 @@ def delete_deck(current_user):
 
     if not deck:
         return jsonify({'message': 'No deck found!'})
-
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    
+    db.session.delete(deck)
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()    
     if deck_id in user_collection.deck_ids:
         deck_ids_list = user_collection.deck_ids.copy()
         deck_ids_list.remove(deck_id)
@@ -527,11 +528,7 @@ def delete_deck(current_user):
         deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
         deleted_deck_ids_list.append(deck_id)
         user_collection.deleted_deck_ids = deleted_deck_ids_list    
-
-
-    db.session.delete(deck)
     db.session.commit()
-
     return jsonify({'message': 'Deck deleted!'})
 
 @app.route('/delete_decks', methods=['DELETE'])
@@ -539,27 +536,24 @@ def delete_deck(current_user):
 @token_required
 def delete_decks(current_user):
     reply_message = {'message': ''}
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     data = request.get_json()
     for deck_id in data['deck_ids']:
-        deck = Decks.query.filter_by(deck_id=deck_id).first()
+        deck = Decks.query.filter_by(deck_id=deck_id).first() 
         if not deck:
             reply_message['message'] += '    No deck found!: ' + deck_id
         else:
-            user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-            if deck_id in user_collection.deck_ids:
-                deck_ids_list = user_collection.deck_ids.copy()
-                deck_ids_list.remove(deck_id)
-                user_collection.deck_ids = deck_ids_list
-            if deck_id not in user_collection.deleted_deck_ids:
-                deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
-                deleted_deck_ids_list.append(deck_id)
-                user_collection.deleted_deck_ids = deleted_deck_ids_list    
-
             db.session.delete(deck)
-            db.session.commit()
-
             reply_message['message'] += '    Deck Deleted!: ' + deck_id
-
+        if deck_id in user_collection.deck_ids:
+            deck_ids_list = user_collection.deck_ids.copy()
+            deck_ids_list.remove(deck_id)
+            user_collection.deck_ids = deck_ids_list
+        if deck_id not in user_collection.deleted_deck_ids:
+            deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+            deleted_deck_ids_list.append(deck_id)
+            user_collection.deleted_deck_ids = deleted_deck_ids_list  
+    db.session.commit()
     return jsonify(reply_message)
 
 @app.route('/get_deck_meta', methods=['POST'])
