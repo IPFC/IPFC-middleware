@@ -585,8 +585,6 @@ def get_decks_meta(current_user):
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-        print("    dump", dump)
-        sys.stdout.flush()
         if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
             deck_meta = {
                 'title': dump['title'],
