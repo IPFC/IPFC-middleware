@@ -465,8 +465,7 @@ def put_decks(current_user):
     updated_decks = []
     not_updated_decks = []
     data = request.get_json()
-    client_decks = data['decks']
-    for client_deck in client_decks:
+    for client_deck in data:
         server_deck = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
 
         # Check IPFS metadata here-------
