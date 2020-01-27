@@ -187,7 +187,7 @@ def login():
         decks_meta = []
         for deck_id in deck_ids:
             dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-            if dump is not None and dump is not {}:
+            if len(dump) > 3:
                 deck_meta = {
                     'title': dump['title'],
                     'edited': dump['edited'],
@@ -195,6 +195,18 @@ def login():
                     'deck_id': dump['deck_id']
                 }
                 decks_meta.append(deck_meta)
+            # delete blank or incomplete decks    
+            else:
+                if deck_id in user_collection.deck_ids:
+                    deck_ids_list = user_collection.deck_ids.copy()
+                    deck_ids_list.remove(deck_id)
+                    user_collection.deck_ids = deck_ids_list
+                if deck_id not in user_collection.deleted_deck_ids:
+                    deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+                    deleted_deck_ids_list.append(deck_id)
+                    user_collection.deleted_deck_ids = deleted_deck_ids_list    
+                db.session.delete(deck)
+                db.session.commit()
 
         decks = []
         print("Getting decks" + str(datetime.datetime.utcnow()))
