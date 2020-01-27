@@ -347,7 +347,7 @@ def post_deck(current_user):
         json_data_for_API["pinataContent"] = deck_schema.dump(new_deck)
         req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+        print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         deck_cid = pinata_api_response["IpfsHash"]
         new_deck.deck_cid = deck_cid
@@ -580,7 +580,6 @@ def get_deck_meta(current_user):
 def get_decks_meta(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
-    print("    deck_ids", deck_ids)
     sys.stdout.flush()
     decks_meta = []
     for deck_id in deck_ids:
