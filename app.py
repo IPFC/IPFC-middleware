@@ -443,7 +443,7 @@ def put_deck(current_user):
         json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
         req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+        print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         server_deck.deck_cid = pinata_api_response["IpfsHash"]
         db.session.commit()
@@ -478,7 +478,7 @@ def put_decks(current_user):
 
         # this check should've already been performed in app, but its not too expensive
         # check edited date isn't older than one in database, if it is, return newest
-        if data['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+        if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
             server_deck.deck = client_deck
             server_deck.title = client_deck['title']
             server_deck.edited = client_deck['edited']
@@ -497,7 +497,7 @@ def put_decks(current_user):
             json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
             req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             server_deck.deck_cid = pinata_api_response["IpfsHash"]
             db.session.commit()
