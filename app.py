@@ -185,14 +185,10 @@ def login():
         sys.stdout.flush()
         deck_ids = user_collection.deck_ids
         decks_meta = []
-        print("    decks_meta ", decks_meta)
-        sys.stdout.flush()
         for deck_id in deck_ids:
             deck = Decks.query.filter_by(deck_id=deck_id).first()
             dump = deck_schema.dump(deck)
             if len(dump) > 3:
-                print("    deck dump ", dump)
-                sys.stdout.flush()
                 deck_meta = {
                     'title': dump['title'],
                     'edited': dump['edited'],
@@ -202,7 +198,7 @@ def login():
                 decks_meta.append(deck_meta)
             # delete blank or incomplete decks    
             else:
-                print("    user_collection.deck_ids ", user_collection.deck_ids)
+                print("    incomplete decks detected ", dump)
                 sys.stdout.flush()
                 db.session.query(Decks).filter(Decks.deck_id == deck_id).delete()
                 if deck_id in user_collection.deck_ids:
@@ -214,8 +210,6 @@ def login():
                     deleted_deck_ids_list.append(deck_id)
                     user_collection.deleted_deck_ids = deleted_deck_ids_list  
                 db.session.commit()
-                print("    user_collection.deck_ids ", user_collection.deck_ids)
-                sys.stdout.flush()
 
         decks = []
         print("    Getting decks" + str(datetime.datetime.utcnow()))
@@ -226,9 +220,6 @@ def login():
         # if len(deck_ids) <= 10:
         for deck_id in deck_ids:
             dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-            if dump['deck'] is None:
-                print("    deck dump ", dump)
-                sys.stdout.flush()
             decks.append(dump['deck'])
         # else:
         #     deck_ids.sort(reverse=True)
