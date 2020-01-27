@@ -501,10 +501,10 @@ def put_decks(current_user):
             sys.stdout.flush()
             server_deck.deck_cid = pinata_api_response["IpfsHash"]
             db.session.commit()
-            updated_decks.append(server_deck)
+            updated_decks.append(server_deck.deck_id)
         # else return the database version saved as server_deck
         else:
-            not_updated_decks.append(server_deck)
+            not_updated_decks.append(server_deck.deck_id)
 
     return jsonify({"updated decks": updated_decks, "not updated decks": not_updated_decks})
 
