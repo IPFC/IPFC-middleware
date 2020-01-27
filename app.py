@@ -507,13 +507,13 @@ def delete_deck(current_user):
 
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     if deck_id in user_collection.deck_ids:
-            deck_ids_list = user_collection.deck_ids.copy()
-            deck_ids_list.remove(deck_id)
-            user_collection.deck_ids = deck_ids_list
-        if deck_id not in user_collection.deleted_deck_ids:
-            deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
-            deleted_deck_ids_list.append(deck_id)
-            user_collection.deleted_deck_ids = deleted_deck_ids_list    
+        deck_ids_list = user_collection.deck_ids.copy()
+        deck_ids_list.remove(deck_id)
+        user_collection.deck_ids = deck_ids_list
+    if deck_id not in user_collection.deleted_deck_ids:
+        deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+        deleted_deck_ids_list.append(deck_id)
+        user_collection.deleted_deck_ids = deleted_deck_ids_list    
 
 
     db.session.delete(deck)
@@ -556,12 +556,13 @@ def get_deck_meta(current_user):
     data = request.get_json()
     deck_id = data['deck_id']
     dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-    deck_meta = {
-        'title': dump['title'],
-        'edited': dump['edited'],
-        'deck_cid': dump['deck_cid'],
-        'deck_id': dump['deck_id']
-    }
+    if dump is not None:
+        deck_meta = {
+            'title': dump['title'],
+            'edited': dump['edited'],
+            'deck_cid': dump['deck_cid'],
+            'deck_id': dump['deck_id']
+        }
     return jsonify(deck_meta)
 
 
@@ -574,13 +575,14 @@ def get_decks_meta(current_user):
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-        deck_meta = {
-            'title': dump['title'],
-            'edited': dump['edited'],
-            'deck_cid': dump['deck_cid'],
-            'deck_id': dump['deck_id']
-        }
-        decks_meta.append(deck_meta)
+        if dump is not None:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned
+            deck_meta = {
+                'title': dump['title'],
+                'edited': dump['edited'],
+                'deck_cid': dump['deck_cid'],
+                'deck_id': dump['deck_id']
+            }
+            decks_meta.append(deck_meta)
     return jsonify(decks_meta)
 
 
