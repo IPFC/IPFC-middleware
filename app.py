@@ -198,7 +198,7 @@ def login():
                 decks_meta.append(deck_meta)
             # delete blank or incomplete decks    
             else:
-                Deck.delete().where(decks.c.deck_id == deck_id)
+                db.session.query(Decks).filter(Decks.deck_id == deck_id).delete()
                 if deck_id in user_collection.deck_ids:
                     deck_ids_list = user_collection.deck_ids.copy()
                     deck_ids_list.remove(deck_id)
