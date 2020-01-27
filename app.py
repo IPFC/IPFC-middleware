@@ -480,9 +480,9 @@ def put_decks(current_user):
         # check edited date isn't older than one in database, if it is, return newest
         if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
             db.session.query(Decks).filter(Decks.deck_id == client_deck['deck_id']).update({
-                server_deck.deck: client_deck,
-                server_deck.title: client_deck['title'],
-                server_deck.edited: client_deck['edited'] 
+                'deck': client_deck,
+                'title': client_deck['title'],
+                'edited': client_deck['edited'] 
             }, synchronize_session = False)
         
             db.session.commit()
