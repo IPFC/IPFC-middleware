@@ -579,7 +579,7 @@ def get_decks_meta(current_user):
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
         print("    dump", dump)
         sys.stdout.flush()
-        if dump is not None:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned
+        if dump is not None or len(dump) < 1:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned
             deck_meta = {
                 'title': dump['title'],
                 'edited': dump['edited'],
