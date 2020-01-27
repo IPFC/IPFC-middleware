@@ -186,7 +186,8 @@ def login():
         deck_ids = user_collection.deck_ids
         decks_meta = []
         for deck_id in deck_ids:
-            dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
+            deck = Decks.query.filter_by(deck_id=deck_id).first()
+            dump = deck_schema.dump(deck)
             if len(dump) > 3:
                 deck_meta = {
                     'title': dump['title'],
