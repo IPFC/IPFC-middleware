@@ -479,6 +479,8 @@ def put_decks(current_user):
         # this check should've already been performed in app, but its not too expensive
         # check edited date isn't older than one in database, if it is, return newest
         if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+            # https://stackoverflow.com/questions/47735329/updating-a-row-using-sqlalchemy-orm
+            # some weirdness where there is no .update function unless you use .query
             db.session.query(Decks).filter(Decks.deck_id == client_deck['deck_id']).update({
                 'deck': client_deck,
                 'title': client_deck['title'],
