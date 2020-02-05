@@ -12,7 +12,7 @@ import requests
 import json
 from flask_cors import CORS, cross_origin
 import sys # Used to make print statements, add a line after print statement:
-# sys.stdout.flush()
+           # sys.stdout.flush()
 
 # remember to include uswgi, psycopg2, marshmallow-sqlalchemy in reqs.txt, also bcrypt==3.1.7 which pipreqs gets wrong:
 # psycopg2_binary==2.8.3
@@ -180,6 +180,12 @@ def login():
         sys.stdout.flush()
         user_collection = UserCollections.query.filter_by(user_id=user.user_id).first()
 
+        # Get pinata keys
+        print("    Getting pinata keys " + str(datetime.datetime.utcnow()))
+        sys.stdout.flush()
+        user= Users.query.filter_by(user_id=user.user_id).first()
+        pinata_keys = { 'pinata_api': user.pinata_api, 'pinata_key': user.pinata_key,}
+
         # Get decks metadata
         print("    Getting decks meta " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
@@ -230,7 +236,9 @@ def login():
         login_return_data = {'user_collection': user_collection_schema.dump(user_collection),
                              'token': token.decode('UTF-8'),
                              'decks_meta': decks_meta,
-                             'decks': decks}
+                             'decks': decks,
+                             'pinata_keys': pinata_keys
+                             }
         print("    returning" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         return jsonify(login_return_data)
