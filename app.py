@@ -54,17 +54,19 @@ class Users(db.Model):
 
 class UserCollections(db.Model):
     user_id = db.Column(VARCHAR, primary_key=True)
-    sr_id = db.Column(VARCHAR)
+    schedule = db.Column(JSONB)
     deck_ids = db.Column(JSONB)
     deleted_deck_ids = db.Column(JSONB)
     all_deck_cids = db.Column(JSONB)
+    webapp_settings = db.Column(JSONB)
 
-    def __init__(self, user_id, sr_id, deck_ids, deleted_deck_ids, all_deck_cids):
+    def __init__(self, user_id, schedule, deck_ids, deleted_deck_ids, all_deck_cids, webapp_settings):
         self.user_id = user_id
-        self.sr_id = sr_id
+        self.schedule = schedule
         self.deck_ids = deck_ids
         self.deleted_deck_ids = deleted_deck_ids
         self.all_deck_cids = all_deck_cids
+        self.webapp_settings = webapp_settings
 
 
 class Decks(db.Model):
@@ -90,7 +92,7 @@ class Decks(db.Model):
 
 class UserCollectionsSchema(ma.Schema):
     class Meta:
-        fields = ("user_id", "sr_id", "deck_ids", "all_deck_cids", "deleted_deck_ids")
+        fields = ("user_id", "schedule", "deck_ids", "all_deck_cids", "deleted_deck_ids", "webapp_settings")
 
 
 class DecksSchema(ma.Schema):
@@ -148,10 +150,11 @@ def sign_up():
         db.session.add(new_user)
 
         new_collection = UserCollections(user_id=user_id,
-                                         sr_id=str(uuid.uuid4()),
+                                         schedule= {},
                                          deck_ids=[],
                                          deleted_deck_ids=[],
-                                         all_deck_cids=[]
+                                         all_deck_cids=[],
+                                         webapp_settings= {}
                                          )
         db.session.add(new_collection)
         db.session.commit()
@@ -254,10 +257,11 @@ def post_user_collection(current_user):
     data = request.get_json()
 
     new_collection = UserCollections(user_id=current_user.user_id,
-                                     sr_id=str(uuid.uuid4()),
+                                     schedule=data['schedule'],
                                      deck_ids=data['deck_ids'],
                                      deleted_deck_ids=data['deleted_deck_ids'],
-                                     all_deck_cids=data['all_deck_cids']
+                                     all_deck_cids=data['all_deck_cids'],
+                                     webapp_settings=data['webapp_settings'],
                                      )
     db.session.add(new_collection)
     db.session.commit()
@@ -280,14 +284,17 @@ def get_user_collection(current_user):
 def put_user_collection(current_user):
     data = request.get_json()
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
-    if 'sr_id' in data:
-        user_collection.sr_id = data['sr_id']
+    if 'schedule' in data:
+        user_collection.schedule = data['schedule']
     if 'deck_ids' in data:
         user_collection.deck_ids = data['deck_ids']
     if 'deleted_deck_ids' in data:
         user_collection.deleted_deck_ids = data['deleted_deck_ids']
     if 'all_deck_cids' in data:
         user_collection.all_deck_cids = data['all_deck_cids']
+    if 'webapp_settings' in data:
+        user_collection.webapp_settings = data['webapp_settings']
+
 
     db.session.commit()
     return user_collection_schema.dump(user_collection)
