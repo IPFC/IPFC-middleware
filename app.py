@@ -287,7 +287,7 @@ def get_meta_and_collection(current_user):
             }
             decks_meta.append(deck_meta)
     return_data = {
-        user_collection: user_collection,
+        user_collection: user_collection_schema.dump(user_collection),
         decks_meta: decks_meta
     }
     return jsonify(return_data)
