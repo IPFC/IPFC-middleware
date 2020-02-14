@@ -268,6 +268,30 @@ def post_user_collection(current_user):
 
     return user_collection_schema.dump(new_collection)
 
+@app.route('/get_meta_and_collection', methods=['GET'])
+@cross_origin(origin='*')
+@token_required
+def get_meta_and_collection(current_user):
+    # check pinata here
+    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    deck_ids = user_collection.deck_ids
+    decks_meta = []
+    for deck_id in deck_ids:
+        dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
+        if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
+            deck_meta = {
+                'title': dump['title'],
+                'edited': dump['edited'],
+                'deck_cid': dump['deck_cid'],
+                'deck_id': dump['deck_id']
+            }
+            decks_meta.append(deck_meta)
+    return_data = {
+        user_collection: user_collection,
+        decks_meta: decks_meta
+    }
+    return jsonify(return_data)
+
 
 @app.route('/get_user_collection', methods=['GET'])
 @cross_origin(origin='*')
@@ -600,7 +624,6 @@ def get_deck_meta(current_user):
 def get_decks_meta(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
-    sys.stdout.flush()
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
