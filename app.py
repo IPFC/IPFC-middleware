@@ -276,10 +276,9 @@ def get_meta_and_collection(current_user):
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
     return_data = {
-        user_collection: user_collection_schema.dump(user_collection),
-        decks_meta: []
+        'user_collection': user_collection_schema.dump(user_collection),
+        'decks_meta': []
     }
-    decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
         if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
