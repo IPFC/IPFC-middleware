@@ -275,6 +275,10 @@ def get_meta_and_collection(current_user):
     # check pinata here
     user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
+    return_data = {
+        user_collection: user_collection_schema.dump(user_collection),
+        decks_meta: []
+    }
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
@@ -285,11 +289,8 @@ def get_meta_and_collection(current_user):
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id']
             }
-            decks_meta.append(deck_meta)
-    return_data = {
-        user_collection: user_collection_schema.dump(user_collection),
-        decks_meta: decks_meta
-    }
+            return_data['decks_meta'].append(deck_meta)
+ 
     return jsonify(return_data)
 
 
