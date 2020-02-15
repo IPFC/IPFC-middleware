@@ -178,10 +178,6 @@ def login():
     if bcrypt.checkpw(auth.password.encode('utf8'), user.password_hash.encode('utf8')):
         token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=3)},
                            app.config['SECRET_KEY'])
-        # Get user collection
-        print("    Getting user collection " + str(datetime.datetime.utcnow()))
-        sys.stdout.flush()
-        user_collection = UserCollections.query.filter_by(user_id=user.user_id).first()
 
         # Get pinata keys
         print("    Getting pinata keys " + str(datetime.datetime.utcnow()))
@@ -189,57 +185,39 @@ def login():
         user= Users.query.filter_by(user_id=user.user_id).first()
         pinata_keys = { 'pinata_api': user.pinata_api, 'pinata_key': user.pinata_key,}
 
-        # Get decks metadata
-        print("    Getting decks meta " + str(datetime.datetime.utcnow()))
-        sys.stdout.flush()
-        deck_ids = user_collection.deck_ids
-        decks_meta = []
-        for deck_id in deck_ids:
-            deck = Decks.query.filter_by(deck_id=deck_id).first()
-            dump = deck_schema.dump(deck)
-            if len(dump) > 3:
-                deck_meta = {
-                    'title': dump['title'],
-                    'edited': dump['edited'],
-                    'deck_cid': dump['deck_cid'],
-                    'deck_id': dump['deck_id']
-                }
-                decks_meta.append(deck_meta)
-            # delete blank or incomplete decks    
-            else:
-                print("    incomplete decks detected ", dump)
-                sys.stdout.flush()
-                db.session.query(Decks).filter(Decks.deck_id == deck_id).delete()
-                if deck_id in user_collection.deck_ids:
-                    deck_ids_list = user_collection.deck_ids.copy()
-                    deck_ids_list.remove(deck_id)
-                    user_collection.deck_ids = deck_ids_list
-                if deck_id not in user_collection.deleted_deck_ids:
-                    deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
-                    deleted_deck_ids_list.append(deck_id)
-                    user_collection.deleted_deck_ids = deleted_deck_ids_list  
-                db.session.commit()
+        # # Get decks metadata
+        # print("    Getting decks meta " + str(datetime.datetime.utcnow()))
+        # sys.stdout.flush()
+        # deck_ids = user_collection.deck_ids
+        # decks_meta = []
+        # for deck_id in deck_ids:
+        #     deck = Decks.query.filter_by(deck_id=deck_id).first()
+        #     dump = deck_schema.dump(deck)
+        #     if len(dump) > 3:
+        #         deck_meta = {
+        #             'title': dump['title'],
+        #             'edited': dump['edited'],
+        #             'deck_cid': dump['deck_cid'],
+        #             'deck_id': dump['deck_id']
+        #         }
+        #         decks_meta.append(deck_meta)
+        #     # delete blank or incomplete decks    
+        #     else:
+        #         print("    incomplete decks detected ", dump)
+        #         sys.stdout.flush()
+        #         db.session.query(Decks).filter(Decks.deck_id == deck_id).delete()
+        #         if deck_id in user_collection.deck_ids:
+        #             deck_ids_list = user_collection.deck_ids.copy()
+        #             deck_ids_list.remove(deck_id)
+        #             user_collection.deck_ids = deck_ids_list
+        #         if deck_id not in user_collection.deleted_deck_ids:
+        #             deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+        #             deleted_deck_ids_list.append(deck_id)
+        #             user_collection.deleted_deck_ids = deleted_deck_ids_list  
+        #         db.session.commit()
 
-        decks = []
-        print("    Getting decks" + str(datetime.datetime.utcnow()))
-        sys.stdout.flush()
-        # Preload up to 10 decks here..... just get them all, up to 100? do speed tests to decide
-        # Realized we can't create the review deck without all the decks. 
-        # need to optimize this later, if data is large....
-        # if len(deck_ids) <= 10:
-        for deck_id in deck_ids:
-            dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-            decks.append(dump['deck'])
-        # else:
-        #     deck_ids.sort(reverse=True)
-        #     for i in range(10):
-        #         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_ids[i]).first())
-        #         decks.append(dump['deck'])
-
-        login_return_data = {'user_collection': user_collection_schema.dump(user_collection),
+        login_return_data = {
                              'token': token.decode('UTF-8'),
-                             'decks_meta': decks_meta,
-                             'decks': decks,
                              'pinata_keys': pinata_keys
                              }
         print("    returning" + str(datetime.datetime.utcnow()))
