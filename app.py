@@ -134,7 +134,6 @@ def token_required(f):
 @app.route('/sign_up', methods=['POST'])
 @cross_origin(origin='*')
 def sign_up():
-
     data = request.get_json()
     exists = Users.query.filter_by(email=data['email']).first()
     if exists is not None:
@@ -218,7 +217,8 @@ def login():
 
         login_return_data = {
                              'token': token.decode('UTF-8'),
-                             'pinata_keys': pinata_keys
+                             'pinata_keys': pinata_keys,
+                             'user_id': user.user_id,
                              }
         print("    returning" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
