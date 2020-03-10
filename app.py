@@ -76,10 +76,10 @@ class Decks(db.Model):
     deck_cid = db.Column(VARCHAR)
     deck = db.Column(JSONB)
     title = db.Column(VARCHAR)
-    length = db.Column(INTEGER)
+    deck_length = db.Column(INTEGER)
     # created by?
 
-    def __init__(self, deck_id, edited, deck_cid, deck, title, length):
+    def __init__(self, deck_id, edited, deck_cid, deck, title, deck_length):
         self.deck = deck
         # These values are repeated, should be the same as inside the deck, used for
         # Quick access of metadata, without an expensive query of the deck
@@ -87,7 +87,7 @@ class Decks(db.Model):
         self.edited = edited
         self.deck_cid = deck_cid
         self.title = title
-        self.length = length
+        self.deck_length = deck_length
 
 
 ### Schemas ###
@@ -100,7 +100,8 @@ class UserCollectionsSchema(ma.Schema):
 
 class DecksSchema(ma.Schema):
     class Meta:
-        fields = ("deck_id", "edited", "deck_cid", "deck", "title", "length")
+        fields = ("deck_id", "edited", "deck_cid",
+                  "deck", "title", "deck_length")
 
 
 user_collection_schema = UserCollectionsSchema()
@@ -274,7 +275,7 @@ def get_meta_and_collection(current_user):
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id'],
-                'length': dump['length']
+                'deck_length': dump['deck_length']
             }
             return_data['decks_meta'].append(deck_meta)
 
@@ -366,7 +367,7 @@ def post_deck(current_user):
             title=client_deck['title'],
             edited=client_deck['edited'],
             deck_cid="",
-            length=len(client_deck['cards'])
+            deck_length=len(client_deck['cards'])
 
         )
         db.session.add(new_deck)
@@ -420,7 +421,7 @@ def post_decks(current_user):
                 title=client_deck['title'],
                 edited=client_deck['edited'],
                 deck_cid="",
-                length=len(client_deck['cards'])
+                deck_length=len(client_deck['cards'])
             )
             db.session.add(new_deck)
             db.session.commit()
@@ -470,7 +471,7 @@ def put_deck(current_user):
         server_deck.deck = client_deck
         server_deck.title = client_deck['title']
         server_deck.edited = client_deck['edited']
-        server_deck.length = len(client_deck['cards'])
+        server_deck.deck_length = len(client_deck['cards'])
         db.session.commit()
 
         # then if the pinata version wasn't the newest, upload to pinata
@@ -532,7 +533,7 @@ def put_decks(current_user):
                 'deck': client_deck,
                 'title': client_deck['title'],
                 'edited': client_deck['edited'],
-                'length': len(client_deck['cards'])
+                'deck_length': len(client_deck['cards'])
             }, synchronize_session=False)
 
             db.session.commit()
@@ -630,7 +631,7 @@ def get_deck_meta(current_user):
             'edited': dump['edited'],
             'deck_cid': dump['deck_cid'],
             'deck_id': dump['deck_id'],
-            'length': dump['length']
+            'deck_length': dump['deck_length']
         }
     return jsonify(deck_meta)
 
@@ -651,7 +652,7 @@ def get_decks_meta(current_user):
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id'],
-                'length': dump['length']
+                'deck_length': dump['deck_length']
             }
             decks_meta.append(deck_meta)
     return jsonify(decks_meta)
