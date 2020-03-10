@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import BIGINT, JSONB, VARCHAR
+from sqlalchemy.dialects.postgresql import BIGINT, JSONB, VARCHAR, INTEGER
 from flask_marshmallow import Marshmallow
 import uuid
 import bcrypt
@@ -76,9 +76,10 @@ class Decks(db.Model):
     deck_cid = db.Column(VARCHAR)
     deck = db.Column(JSONB)
     title = db.Column(VARCHAR)
+    length = db.Column(INTEGER)
     # created by?
 
-    def __init__(self, deck_id, edited, deck_cid, deck, title):
+    def __init__(self, deck_id, edited, deck_cid, deck, title, length):
         self.deck = deck
         # These values are repeated, should be the same as inside the deck, used for
         # Quick access of metadata, without an expensive query of the deck
@@ -86,6 +87,7 @@ class Decks(db.Model):
         self.edited = edited
         self.deck_cid = deck_cid
         self.title = title
+        self.length = length
 
 
 ### Schemas ###
@@ -98,7 +100,7 @@ class UserCollectionsSchema(ma.Schema):
 
 class DecksSchema(ma.Schema):
     class Meta:
-        fields = ("deck_id", "edited", "deck_cid", "deck", "title")
+        fields = ("deck_id", "edited", "deck_cid", "deck", "title", "length")
 
 
 user_collection_schema = UserCollectionsSchema()
@@ -264,6 +266,7 @@ def get_meta_and_collection(current_user):
         'decks_meta': []
     }
     for deck_id in deck_ids:
+        # getting the whole schema includes the deck. Should update this to only get the meta feilds
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
         if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
             deck_meta = {
@@ -271,7 +274,7 @@ def get_meta_and_collection(current_user):
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id'],
-                'length': len(dump['cards'])
+                'length': dump['length']
             }
             return_data['decks_meta'].append(deck_meta)
 
@@ -362,7 +365,9 @@ def post_deck(current_user):
             deck_id=client_deck['deck_id'],
             title=client_deck['title'],
             edited=client_deck['edited'],
-            deck_cid=""
+            deck_cid="",
+            length=len(client_deck['cards'])
+
         )
         db.session.add(new_deck)
         db.session.commit()
@@ -414,7 +419,8 @@ def post_decks(current_user):
                 deck_id=client_deck['deck_id'],
                 title=client_deck['title'],
                 edited=client_deck['edited'],
-                deck_cid=""
+                deck_cid="",
+                length=len(client_deck['cards'])
             )
             db.session.add(new_deck)
             db.session.commit()
@@ -464,6 +470,7 @@ def put_deck(current_user):
         server_deck.deck = client_deck
         server_deck.title = client_deck['title']
         server_deck.edited = client_deck['edited']
+        server_deck.length = len(client_deck['cards'])
         db.session.commit()
 
         # then if the pinata version wasn't the newest, upload to pinata
@@ -524,7 +531,8 @@ def put_decks(current_user):
             db.session.query(Decks).filter(Decks.deck_id == client_deck['deck_id']).update({
                 'deck': client_deck,
                 'title': client_deck['title'],
-                'edited': client_deck['edited']
+                'edited': client_deck['edited'],
+                'length': len(client_deck['cards'])
             }, synchronize_session=False)
 
             db.session.commit()
@@ -621,7 +629,8 @@ def get_deck_meta(current_user):
             'title': dump['title'],
             'edited': dump['edited'],
             'deck_cid': dump['deck_cid'],
-            'deck_id': dump['deck_id']
+            'deck_id': dump['deck_id'],
+            'length': dump['length']
         }
     return jsonify(deck_meta)
 
@@ -641,7 +650,8 @@ def get_decks_meta(current_user):
                 'title': dump['title'],
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
-                'deck_id': dump['deck_id']
+                'deck_id': dump['deck_id'],
+                'length': dump['length']
             }
             decks_meta.append(deck_meta)
     return jsonify(decks_meta)
