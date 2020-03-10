@@ -166,7 +166,7 @@ def sign_up():
         return jsonify({'message': 'New user created!'})
 
 
-@app.route('/login')
+@app.route('/login',  methods=['GET'])
 # @cross_origin(origin='*')
 def login():
     print("    starting login " + str(datetime.datetime.utcnow()))
