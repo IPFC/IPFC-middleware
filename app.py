@@ -11,8 +11,8 @@ import os
 import requests
 import json
 from flask_cors import CORS, cross_origin
-import sys # Used to make print statements, add a line after print statement:
-           # sys.stdout.flush()
+import sys  # Used to make print statements, add a line after print statement:
+# sys.stdout.flush()
 
 # remember to include uswgi, psycopg2, marshmallow-sqlalchemy in reqs.txt, also bcrypt==3.1.7 which pipreqs gets wrong:
 # psycopg2_binary==2.8.3
@@ -35,6 +35,7 @@ pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
 
 ### Models ###
+
 
 class Users(db.Model):
     __table_args__ = {'schema': 'admin'}
@@ -79,20 +80,20 @@ class Decks(db.Model):
 
     def __init__(self, deck_id, edited, deck_cid, deck, title):
         self.deck = deck
-        # These values are repeated, should be the same as inside the deck, used for 
+        # These values are repeated, should be the same as inside the deck, used for
         # Quick access of metadata, without an expensive query of the deck
         self.deck_id = deck_id
         self.edited = edited
         self.deck_cid = deck_cid
         self.title = title
-        
 
 
 ### Schemas ###
 
 class UserCollectionsSchema(ma.Schema):
     class Meta:
-        fields = ("user_id", "schedule", "deck_ids", "all_deck_cids", "deleted_deck_ids", "webapp_settings")
+        fields = ("user_id", "schedule", "deck_ids", "all_deck_cids",
+                  "deleted_deck_ids", "webapp_settings")
 
 
 class DecksSchema(ma.Schema):
@@ -120,7 +121,8 @@ def token_required(f):
 
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'])
-            current_user = Users.query.filter_by(user_id=data['user_id']).first()
+            current_user = Users.query.filter_by(
+                user_id=data['user_id']).first()
         except:
             return jsonify({'message': 'Token is invalid!'}), 401
 
@@ -139,7 +141,8 @@ def sign_up():
     if exists is not None:
         return jsonify({"error": "Email already exists"})
     else:
-        hashed_password = bcrypt.hashpw(data['password'].encode('utf8'), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(
+            data['password'].encode('utf8'), bcrypt.gensalt())
         user_id = str(uuid.uuid4())
         new_user = Users(user_id=user_id,
                          email=data['email'],
@@ -149,11 +152,11 @@ def sign_up():
         db.session.add(new_user)
 
         new_collection = UserCollections(user_id=user_id,
-                                         schedule= {},
+                                         schedule={},
                                          deck_ids=[],
                                          deleted_deck_ids=[],
                                          all_deck_cids=[],
-                                         webapp_settings= {}
+                                         webapp_settings={}
                                          )
         db.session.add(new_collection)
         db.session.commit()
@@ -181,8 +184,9 @@ def login():
         # Get pinata keys
         print("    Getting pinata keys " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
-        user= Users.query.filter_by(user_id=user.user_id).first()
-        pinata_keys = { 'pinata_api': user.pinata_api, 'pinata_key': user.pinata_key,}
+        user = Users.query.filter_by(user_id=user.user_id).first()
+        pinata_keys = {'pinata_api': user.pinata_api,
+                       'pinata_key': user.pinata_key, }
 
         # # Get decks metadata
         # print("    Getting decks meta " + str(datetime.datetime.utcnow()))
@@ -200,7 +204,7 @@ def login():
         #             'deck_id': dump['deck_id']
         #         }
         #         decks_meta.append(deck_meta)
-        #     # delete blank or incomplete decks    
+        #     # delete blank or incomplete decks
         #     else:
         #         print("    incomplete decks detected ", dump)
         #         sys.stdout.flush()
@@ -212,14 +216,14 @@ def login():
         #         if deck_id not in user_collection.deleted_deck_ids:
         #             deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
         #             deleted_deck_ids_list.append(deck_id)
-        #             user_collection.deleted_deck_ids = deleted_deck_ids_list  
+        #             user_collection.deleted_deck_ids = deleted_deck_ids_list
         #         db.session.commit()
 
         login_return_data = {
-                             'token': token.decode('UTF-8'),
-                             'pinata_keys': pinata_keys,
-                             'user_id': user.user_id,
-                             }
+            'token': token.decode('UTF-8'),
+            'pinata_keys': pinata_keys,
+            'user_id': user.user_id,
+        }
         print("    returning" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         return jsonify(login_return_data)
@@ -246,12 +250,14 @@ def post_user_collection(current_user):
 
     return user_collection_schema.dump(new_collection)
 
+
 @app.route('/get_meta_and_collection', methods=['GET'])
 @cross_origin(origin='*')
 @token_required
 def get_meta_and_collection(current_user):
     # check pinata here
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
     return_data = {
         'user_collection': user_collection_schema.dump(user_collection),
@@ -264,10 +270,11 @@ def get_meta_and_collection(current_user):
                 'title': dump['title'],
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
-                'deck_id': dump['deck_id']
+                'deck_id': dump['deck_id'],
+                'length': len(dump['cards'])
             }
             return_data['decks_meta'].append(deck_meta)
- 
+
     return jsonify(return_data)
 
 
@@ -276,7 +283,8 @@ def get_meta_and_collection(current_user):
 @token_required
 def get_user_collection(current_user):
     # check pinata here
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     return user_collection_schema.dump(user_collection)
 
 
@@ -285,7 +293,8 @@ def get_user_collection(current_user):
 @token_required
 def put_user_collection(current_user):
     data = request.get_json()
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     if 'schedule' in data:
         user_collection.schedule = data['schedule']
     if 'deck_ids' in data:
@@ -296,7 +305,6 @@ def put_user_collection(current_user):
         user_collection.all_deck_cids = data['all_deck_cids']
     if 'webapp_settings' in data:
         user_collection.webapp_settings = data['webapp_settings']
-
 
     db.session.commit()
     return user_collection_schema.dump(user_collection)
@@ -331,8 +339,10 @@ def get_decks(current_user):
 @token_required
 def post_deck(current_user):
     client_deck = request.get_json()
-    exists_in_decks = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    exists_in_decks = Decks.query.filter_by(
+        deck_id=client_deck['deck_id']).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     if client_deck['deck_id'] not in user_collection.deck_ids:
         deck_ids_list = user_collection.deck_ids.copy()
         deck_ids_list.append(client_deck['deck_id'])
@@ -353,23 +363,26 @@ def post_deck(current_user):
             title=client_deck['title'],
             edited=client_deck['edited'],
             deck_cid=""
-            )
+        )
         db.session.add(new_deck)
         db.session.commit()
         json_data_for_API = {}
         json_data_for_API["pinataMetadata"] = {
             "name": new_deck.title,
             "keyvalues": {"deck_id": new_deck.deck_id, "edited": new_deck.edited}
-            }
+        }
         json_data_for_API["pinataContent"] = deck_schema.dump(new_deck)
-        req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+        req = requests.post(
+            pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+        print("    uploaded deck to IPFS. Hash: " +
+              pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         deck_cid = pinata_api_response["IpfsHash"]
         new_deck.deck_cid = deck_cid
         db.session.commit()
         return deck_schema.dump(new_deck)
+
 
 @app.route('/post_decks', methods=['POST'])
 @cross_origin(origin='*')
@@ -378,7 +391,8 @@ def post_decks(current_user):
     client_decks = request.get_json()
     decks_added = []
     decks_not_added = []
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     for client_deck in client_decks:
         if client_deck['deck_id'] not in user_collection.deck_ids:
             # aparently you can't directly append a list in SQLalchemy
@@ -390,7 +404,7 @@ def post_decks(current_user):
         pinata_api = current_user.pinata_api
         pinata_key = current_user.pinata_key
         pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
-                            "pinata_secret_api_key": pinata_key}
+                              "pinata_secret_api_key": pinata_key}
         if exists is not None:
             decks_not_added.append(client_deck['title'])
         else:
@@ -401,32 +415,36 @@ def post_decks(current_user):
                 title=client_deck['title'],
                 edited=client_deck['edited'],
                 deck_cid=""
-                )
+            )
             db.session.add(new_deck)
             db.session.commit()
             json_data_for_API = {}
             json_data_for_API["pinataMetadata"] = {
                 "name": new_deck.title,
                 "keyvalues": {"deck_id": new_deck.deck_id, "edited": new_deck.edited}
-                }
+            }
             json_data_for_API["pinataContent"] = deck_schema.dump(new_deck)
-            req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+            req = requests.post(
+                pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            print("    uploaded deck to IPFS. Hash: " +
+                  pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             deck_cid = pinata_api_response["IpfsHash"]
             new_deck.deck_cid = deck_cid
             db.session.commit()
             decks_added.append(client_deck['title'])
-    
+
     return jsonify({'decks_added': decks_added, 'decks_not_added': decks_not_added})
+
 
 @app.route('/put_deck', methods=['PUT'])
 @cross_origin(origin='*')
 @token_required
 def put_deck(current_user):
     client_deck = request.get_json()
-    server_deck = Decks.query.filter_by(deck_id=[client_deck['deck_id']]).first()
+    server_deck = Decks.query.filter_by(
+        deck_id=[client_deck['deck_id']]).first()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
@@ -436,12 +454,13 @@ def put_deck(current_user):
     # req = requests.get(pinata_pin_list + query_string, headers=pinata_api_headers)
     # pinata_data = json.loads(req.text)
     # if pinata_data['edited'] > server_deck.edited and pinata_data['edited'] > data['edited']:
-        # server_deck... = pinata_data['...']
-        # db.session.commit()
+    # server_deck... = pinata_data['...']
+    # db.session.commit()
 
     # this check should've already been performed in app, but its not too expensive
     # check edited date isn't older than one in database, if it is, return newest
-    if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+    # and data['edited'] > pinata_data['edited']:
+    if client_deck['edited'] > server_deck.edited:
         server_deck.deck = client_deck
         server_deck.title = client_deck['title']
         server_deck.edited = client_deck['edited']
@@ -456,19 +475,21 @@ def put_deck(current_user):
         json_data_for_API["pinataMetadata"] = {
             "name": server_deck.title,
             "keyvalues": {"deck_id": server_deck.deck_id, "edited": server_deck.edited}
-            }
+        }
         json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
-        req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+        req = requests.post(
+            pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+        print("    uploaded deck to IPFS. Hash: " +
+              pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         server_deck.deck_cid = pinata_api_response["IpfsHash"]
         db.session.commit()
-        return jsonify({'message': 'Deck updated', 'deck': deck_schema.dump(server_deck)}) 
+        return jsonify({'message': 'Deck updated', 'deck': deck_schema.dump(server_deck)})
 
     # else return the database version saved as server_deck
-    else:                                                      #do we need the dump? compare with put_decks
-        return jsonify({'message': 'Server decks is newer', 'deck': deck_schema.dump(server_deck)}) 
+    else:  # do we need the dump? compare with put_decks
+        return jsonify({'message': 'Server decks is newer', 'deck': deck_schema.dump(server_deck)})
 
 
 @app.route('/put_decks', methods=['PUT'])
@@ -478,32 +499,34 @@ def put_decks(current_user):
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
-                            "pinata_secret_api_key": pinata_key}
+                          "pinata_secret_api_key": pinata_key}
     updated_decks = []
     not_updated_decks = []
     data = request.get_json()
     for client_deck in data:
-        server_deck = Decks.query.filter_by(deck_id=client_deck['deck_id']).first()
+        server_deck = Decks.query.filter_by(
+            deck_id=client_deck['deck_id']).first()
 
         # Check IPFS metadata here-------
         # query_string = '?metadata[keyvalues]={"deck_id":{"value":"' + data['deck_id'] + '","op":"eq"}}'
         # req = requests.get(pinata_pin_list + query_string, headers=pinata_api_headers)
         # pinata_data = json.loads(req.text)
         # if pinata_data['edited'] > server_deck.edited and pinata_data['edited'] > data['edited']:
-            # server_deck... = pinata_data['...']
-            # db.session.commit()
+        # server_deck... = pinata_data['...']
+        # db.session.commit()
 
         # this check should've already been performed in app, but its not too expensive
         # check edited date isn't older than one in database, if it is, return newest
-        if client_deck['edited'] > server_deck.edited: # and data['edited'] > pinata_data['edited']:
+        # and data['edited'] > pinata_data['edited']:
+        if client_deck['edited'] > server_deck.edited:
             # https://stackoverflow.com/questions/47735329/updating-a-row-using-sqlalchemy-orm
             # some weirdness where there is no .update function unless you use .query
             db.session.query(Decks).filter(Decks.deck_id == client_deck['deck_id']).update({
                 'deck': client_deck,
                 'title': client_deck['title'],
-                'edited': client_deck['edited'] 
-            }, synchronize_session = False)
-        
+                'edited': client_deck['edited']
+            }, synchronize_session=False)
+
             db.session.commit()
 
             # then if the pinata version wasn't the newest, upload to pinata
@@ -515,11 +538,13 @@ def put_decks(current_user):
             json_data_for_API["pinataMetadata"] = {
                 "name": server_deck.title,
                 "keyvalues": {"deck_id": server_deck.deck_id, "edited": server_deck.edited}
-                }
+            }
             json_data_for_API["pinataContent"] = deck_schema.dump(server_deck)
-            req = requests.post(pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
+            req = requests.post(
+                pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("    uploaded deck to IPFS. Hash: " + pinata_api_response["IpfsHash"])
+            print("    uploaded deck to IPFS. Hash: " +
+                  pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             server_deck.deck_cid = pinata_api_response["IpfsHash"]
             db.session.commit()
@@ -529,6 +554,7 @@ def put_decks(current_user):
             not_updated_decks.append(server_deck.deck_id)
 
     return jsonify({"updated decks": updated_decks, "not updated decks": not_updated_decks})
+
 
 @app.route('/delete_deck', methods=['DELETE'])
 @cross_origin(origin='*')
@@ -540,9 +566,10 @@ def delete_deck(current_user):
 
     if not deck:
         return jsonify({'message': 'No deck found!'})
-    
+
     db.session.delete(deck)
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()    
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     if deck_id in user_collection.deck_ids:
         deck_ids_list = user_collection.deck_ids.copy()
         deck_ids_list.remove(deck_id)
@@ -550,19 +577,21 @@ def delete_deck(current_user):
     if deck_id not in user_collection.deleted_deck_ids:
         deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
         deleted_deck_ids_list.append(deck_id)
-        user_collection.deleted_deck_ids = deleted_deck_ids_list    
+        user_collection.deleted_deck_ids = deleted_deck_ids_list
     db.session.commit()
     return jsonify({'message': 'Deck deleted!'})
+
 
 @app.route('/delete_decks', methods=['DELETE'])
 @cross_origin(origin='*')
 @token_required
 def delete_decks(current_user):
     reply_message = {'message': ''}
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     data = request.get_json()
     for deck_id in data['deck_ids']:
-        deck = Decks.query.filter_by(deck_id=deck_id).first() 
+        deck = Decks.query.filter_by(deck_id=deck_id).first()
         if not deck:
             reply_message['message'] += '    No deck found!: ' + deck_id
         else:
@@ -575,9 +604,10 @@ def delete_decks(current_user):
         if deck_id not in user_collection.deleted_deck_ids:
             deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
             deleted_deck_ids_list.append(deck_id)
-            user_collection.deleted_deck_ids = deleted_deck_ids_list  
+            user_collection.deleted_deck_ids = deleted_deck_ids_list
     db.session.commit()
     return jsonify(reply_message)
+
 
 @app.route('/get_deck_meta', methods=['POST'])
 @cross_origin(origin='*')
@@ -600,7 +630,8 @@ def get_deck_meta(current_user):
 @cross_origin(origin='*')
 @token_required
 def get_decks_meta(current_user):
-    user_collection = UserCollections.query.filter_by(user_id=current_user.user_id).first()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
     decks_meta = []
     for deck_id in deck_ids:
