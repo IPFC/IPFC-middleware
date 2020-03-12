@@ -161,6 +161,11 @@ def sign_up():
                                          all_deck_cids=[],
                                          webapp_settings={}
                                          )
+        if 'user_collection' in data.keys():
+            new_collection.schedule = data['user_collection']['schedule']
+            new_collection.deleted_deck_ids = data['user_collection']['deleted_deck_ids']
+            new_collection.all_deck_cids = data['user_collection']['all_deck_cids']
+            new_collection.webapp_settings = data['user_collection']['webapp_settings']
         db.session.add(new_collection)
         db.session.commit()
         return jsonify({'message': 'New user created!'})
