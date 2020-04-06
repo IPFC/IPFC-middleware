@@ -346,6 +346,7 @@ def put_user_collection(current_user):
     if 'extension_settings' in data:
         user_collection.extension_settings = data['extension_settings']
     if 'highlight_urls' in data:
+        log('update highlight_urls', data)
         user_collection.highlight_urls = data['highlight_urls']
 
     db.session.commit()
@@ -707,8 +708,7 @@ def compare_highlights_and_cards(current_user):
         user_id=current_user.user_id).first()
     client_highlights_meta = data['highlights_meta']
     log("    client_highlights_meta ", client_highlights_meta)
-    server_highlights = {}
-    # server_newer returns full highlights to client. Client can update locally immediately.
+        # server_newer returns full highlights to client. Client can update locally immediately.
     # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
     server_newer = {}
     # client_newer can just be in the meta format. Client must post them on response.
