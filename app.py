@@ -338,7 +338,7 @@ def put_user_collection(current_user):
     if 'webapp_settings' in data:
         user_collection.webapp_settings = data['webapp_settings']
     if 'extension_settings' in data:
-        user_collection.extension_se    ttings = data['extension_settings']
+        user_collection.extension_settings = data['extension_settings']
     if 'highlight_urls' in data:
         user_collection.highlight_urls = data['highlight_urls']
 
