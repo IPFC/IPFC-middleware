@@ -793,7 +793,10 @@ def post_highlights(current_user):
                     website.highlights[highlight_id] = highlights[website.url][highlight_id]
     for url in highlights:
         if url not in server_urls:
-            all_websites[url] = highlights[url]
+            for website in all_websites:
+                if (website.url == url):
+                    website.highlights = highlights[url]
+                    break
     return jsonify({"all_websites": all_websites})
 # get website_all
 
