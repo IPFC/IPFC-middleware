@@ -36,8 +36,8 @@ pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
 
 
 def log(string, item):
-    log(string)
-    log(json.dumps(item))
+    print(string)
+    print(json.dumps(item))
     sys.stdout.flush()
 
 ### Models ###
@@ -706,7 +706,7 @@ def compare_highlights_meta(current_user):
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
     client_highlights_meta = data['highlights_meta']
-    log("    client_highlights_meta ",  client_highlights_meta)
+    log("    client_highlights_meta ", client_highlights_meta)
     server_highlights = {}
     # server_newer_highlights returns full highlights to client. Client can update locally immediately.
     # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
