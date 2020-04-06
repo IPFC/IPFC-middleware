@@ -11,7 +11,7 @@ import os
 import requests
 import json
 from flask_cors import CORS, cross_origin
-import sys  # Used to make print statements, add a line after print statement:
+import sys  # Used to make log statements, add a line after log statement:
 # sys.stdout.flush()
 
 # remember to include uswgi, psycopg2, marshmallow-sqlalchemy in reqs.txt, also bcrypt==3.1.7 which pipreqs gets wrong:
@@ -33,6 +33,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
+
+
+def log(string, item):
+    log(string)
+    log(json.dumps(item))
+    sys.stdout.flush()
 
 ### Models ###
 
@@ -197,7 +203,7 @@ def sign_up():
 @app.route('/login',  methods=['GET'])
 # @cross_origin(origin='*')
 def login():
-    print("    starting login " + str(datetime.datetime.utcnow()))
+    log("    starting login " + str(datetime.datetime.utcnow()))
     sys.stdout.flush()
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
@@ -213,14 +219,14 @@ def login():
                            app.config['SECRET_KEY'])
 
         # Get pinata keys
-        print("    Getting pinata keys " + str(datetime.datetime.utcnow()))
+        log("    Getting pinata keys " + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         user = Users.query.filter_by(user_id=user.user_id).first()
         pinata_keys = {'pinata_api': user.pinata_api,
                        'pinata_key': user.pinata_key, }
 
         # # Get decks metadata
-        # print("    Getting decks meta " + str(datetime.datetime.utcnow()))
+        # log("    Getting decks meta " + str(datetime.datetime.utcnow()))
         # sys.stdout.flush()
         # deck_ids = user_collection.deck_ids
         # decks_meta = []
@@ -237,7 +243,7 @@ def login():
         #         decks_meta.append(deck_meta)
         #     # delete blank or incomplete decks
         #     else:
-        #         print("    incomplete decks detected ", dump)
+        #         log("    incomplete decks detected ", dump)
         #         sys.stdout.flush()
         #         db.session.query(Decks).filter(Decks.deck_id == deck_id).delete()
         #         if deck_id in user_collection.deck_ids:
@@ -255,7 +261,7 @@ def login():
             'pinata_keys': pinata_keys,
             'user_id': user.user_id,
         }
-        print("    returning" + str(datetime.datetime.utcnow()))
+        log("    returning" + str(datetime.datetime.utcnow()))
         sys.stdout.flush()
         return jsonify(login_return_data)
 
@@ -413,8 +419,8 @@ def post_deck(current_user):
         req = requests.post(
             pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("    uploaded deck to IPFS. Hash: " +
-              pinata_api_response["IpfsHash"])
+        log("    uploaded deck to IPFS. Hash: " +
+            pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         deck_cid = pinata_api_response["IpfsHash"]
         new_deck.deck_cid = deck_cid
@@ -466,8 +472,8 @@ def post_decks(current_user):
             req = requests.post(
                 pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("    uploaded deck to IPFS. Hash: " +
-                  pinata_api_response["IpfsHash"])
+            log("    uploaded deck to IPFS. Hash: " +
+                pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             deck_cid = pinata_api_response["IpfsHash"]
             new_deck.deck_cid = deck_cid
@@ -520,8 +526,8 @@ def put_deck(current_user):
         req = requests.post(
             pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
         pinata_api_response = json.loads(req.text)
-        print("    uploaded deck to IPFS. Hash: " +
-              pinata_api_response["IpfsHash"])
+        log("    uploaded deck to IPFS. Hash: " +
+            pinata_api_response["IpfsHash"])
         sys.stdout.flush()
         server_deck.deck_cid = pinata_api_response["IpfsHash"]
         db.session.commit()
@@ -584,8 +590,8 @@ def put_decks(current_user):
             req = requests.post(
                 pinata_json_url, json=json_data_for_API, headers=pinata_api_headers)
             pinata_api_response = json.loads(req.text)
-            print("    uploaded deck to IPFS. Hash: " +
-                  pinata_api_response["IpfsHash"])
+            log("    uploaded deck to IPFS. Hash: " +
+                pinata_api_response["IpfsHash"])
             sys.stdout.flush()
             server_deck.deck_cid = pinata_api_response["IpfsHash"]
             db.session.commit()
@@ -700,7 +706,7 @@ def compare_highlights_meta(current_user):
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
     client_highlights_meta = data['highlights_meta']
-    print("    client_highlights_meta " + client_highlights_meta)
+    log("    client_highlights_meta ",  client_highlights_meta)
     server_highlights = {}
     # server_newer_highlights returns full highlights to client. Client can update locally immediately.
     # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
@@ -709,42 +715,42 @@ def compare_highlights_meta(current_user):
     # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
     client_newer_highlights = {}
     all_websites = Websites.query.all()
-    print("    all_websites " + all_websites)
+    log("    all_websites ", all_websites)
     for website in all_websites:
-        print("    user_collection['highlight_urls']['list'] " +
-              user_collection['highlight_urls']['list'])
+        log("    user_collection['highlight_urls']['list'] ",
+            user_collection['highlight_urls']['list'])
         if website.url in user_collection['highlight_urls']['list']:
-            print("    website " + website)
-            print("    client_highlights_meta.keys() " +
-                  client_highlights_meta.keys())
+            log("    website ", website)
+            log("    client_highlights_meta.keys() ",
+                client_highlights_meta.keys())
             if website.url not in server_highlights.keys():
                 server_highlights[website.url] = {
                     "edited": server_highlights[website.url]['edited']}
             for highlight in website.highlights.keys():
-                print(
-                    "    website.highlights[highlight].user_id " + website.highlights[highlight].user_id)
-                print("    current_user.user_id " + current_user.user_id)
+                log(
+                    "    website.highlights[highlight].user_id ", website.highlights[highlight].user_id)
+                log("    current_user.user_id ", current_user.user_id)
                 if website.highlights[highlight].user_id == current_user.user_id:
-                    print("    server_highlights[website.url][highlight] " +
-                          server_highlights[website.url][highlight])
+                    log("    server_highlights[website.url][highlight] ",
+                        server_highlights[website.url][highlight])
                     server_highlights[website.url][highlight] = website.highlights[highlight]
-                    print(
-                        "    website.highlights[highlight] " + website.highlights[highlight])
+                    log(
+                        "    website.highlights[highlight] ", website.highlights[highlight])
 
-    print("    server_highlights " + server_highlights)
-    print("    server_highlights.keys() " + server_highlights.keys())
-    print("    client_highlights_meta.keys() " + client_highlights_meta.keys())
+    log("    server_highlights ", server_highlights)
+    log("    server_highlights.keys() ", server_highlights.keys())
+    log("    client_highlights_meta.keys() ", client_highlights_meta.keys())
     for url in server_highlights.keys():
         for url2 in client_highlights_meta.keys():
             if url == url2:
                 if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
                     for highlight in server_highlights[url].keys():
                         if highlight not in client_highlights_meta[url].keys():
-                            print(
-                                "    server_highlights[url][highlight] " + server_highlights[url][highlight])
+                            log(
+                                "    server_highlights[url][highlight] ", server_highlights[url][highlight])
                             server_newer_highlights[url][highlight] = server_highlights[url][highlight]
-                            print(
-                                "    server_newer_highlights[url][highlight] " + server_newer_highlights[url][highlight])
+                            log(
+                                "    server_newer_highlights[url][highlight] ", server_newer_highlights[url][highlight])
                         else:
                             for highlight_meta in client_highlights_meta[url].keys():
                                 if highlight_meta not in server_highlights[url].keys():
@@ -755,9 +761,8 @@ def compare_highlights_meta(current_user):
                                             client_newer_highlights[url][highlight] = client_highlights_meta[url][highlight]
                                         elif client_highlights_meta[url][highlight] < server_highlights[url][highlight]['edited']:
                                             server_newer_highlights[url][highlight] = server_highlights[url][highlight]
-    print("    server_newer_highlights" + server_newer_highlights)
-    print("    client_newer_highlights" + client_newer_highlights)
-    sys.stdout.flush()
+    log("    server_newer_highlights", server_newer_highlights)
+    log("    client_newer_highlights", client_newer_highlights)
     return jsonify({server_newer_highlights: server_newer_highlights, client_newer_highlights: client_newer_highlights})
 
 
