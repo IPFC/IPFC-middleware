@@ -797,6 +797,7 @@ def post_highlights(current_user):
                 if (website.url == url):
                     website.highlights = highlights[url]
                     break
+    db.session.commit()
     return jsonify({"all_websites": all_websites})
 # get website_all
 
