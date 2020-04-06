@@ -35,9 +35,10 @@ pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
 
 
-def log(string, item):
+def log(string, item=None):
     print(string)
-    print(json.dumps(item))
+    if item is not None:
+        print(json.dumps(item))
     sys.stdout.flush()
 
 ### Models ###
@@ -211,7 +212,7 @@ def sign_up():
 @app.route('/login',  methods=['GET'])
 # @cross_origin(origin='*')
 def login():
-    log("    starting login " + str(datetime.datetime.utcnow()))
+    log("    starting login ", str(datetime.datetime.utcnow()))
     sys.stdout.flush()
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
