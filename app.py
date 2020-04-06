@@ -787,9 +787,9 @@ def compare_highlights_and_cards(current_user):
                             elif highlight != 'edited' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
                                 # remember that the format of server and client is different, server is ORM object, client is dict.
                                 # Server is full highlights, client is meta: { "url":{ "highlight_id": 12341234, "edited": 123123 }}
-                                if server_highlights[highlight].edited > client_highlights[highlight]:
+                                if server_highlights[highlight]['edited'] > client_highlights[highlight]:
                                     server_newer[url][highlight] = server_highlights[url][highlight]
-                                elif server_highlights[highlight].edited < client_highlights[highlight]:
+                                elif server_highlights[highlight]['edited'] < client_highlights[highlight]:
                                     client_newer[url][highlight] = client_highlights[url][highlight]
 
     log("    server_newer ", server_newer)
@@ -832,13 +832,13 @@ def post_highlights(current_user):
                 cards = client_highlights['cards']
             for highlight in server_highlights:
                 if highlight != 'edited' and highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
-                    if highlights[highlight].user_id == user_collection.user_id:
+                    if highlights[highlight]['user_id'] == user_collection.user_id:
                         highlights[highlight] = client_highlights[highlight]
                     else:
                         highlights[highlight] = server_highlights[highlight]
                 elif highlight == 'cards':
                     for card in server_highlights.cards:
-                        if card.user_id != user_collection.user_id:
+                        if card['user_id'] != user_collection.user_id:
                             cards.append(card)
                         for card in client_highlights['cards']:
                             if card['user_id'] == user_collection.user_id:
