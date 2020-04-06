@@ -818,7 +818,8 @@ def post_highlights(current_user):
                     highlights[highlight] = client_highlights[highlight]
             if client_highlights['cards'] is not None:
                 cards = client_highlights['cards']
-            new_url = Websites(url=url, highlights=highlights, cards=cards)
+            new_url = Websites(url=url, highlights=highlights,
+                               cards=cards, site_owner='', lessons='')
             log('added url', {'highlights': highlights, 'cards': cards})
             db.session.add(new_url)
             db.session.commit()
