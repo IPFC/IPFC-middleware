@@ -727,7 +727,7 @@ def compare_highlights_and_cards(current_user):
     # client_newer can just be in the meta format. Client must post them on response.
     # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
     client_newer = {}
-
+    log('user_collection.highlight_urls', user_collection.highlight_urls)
     for url in user_collection.highlight_urls.list:
         # if client doesn't have a URL
         if url not in client_highlights_meta:
