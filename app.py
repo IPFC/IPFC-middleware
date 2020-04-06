@@ -768,7 +768,7 @@ def compare_highlights_and_cards(current_user):
                                             elif card.edited < card1['edited']:
                                                 client_newer[url]['cards'].append(
                                                     card1)
-                            elif highlight != = 'order' and highlight != = 'orderedCards' and highlight != = 'orderlessCards':
+                            elif highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
                                 # remember that the format of server and client is different, server is ORM object, client is dict.
                                 # Server is full highlights, client is meta: { "url":{ "highlight_id": 12341234, "edited": 123123 }}
                                 if server_highlights[highlight].edited > client_highlights[highlight]:
@@ -797,11 +797,10 @@ def post_highlights(current_user):
         server_website = Websites.query.filter_by(url=url).first()
         if server_website is None:
             highlights = {}
-            cards = []
             for highlight in client_highlights:
-                if highlight != = 'cards' and highlight != = 'order' and highlight != = 'orderedCards' and highlight != = 'orderlessCards':
+                if highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
                     highlights[highlight] = client_highlights[highlight]
-                elif highlight == 'cards'
+            cards = client_highlights['cards']
             new_url = Websites(url=url, highlights=highlights, cards=cards)
             log('added url', {'highlights': highlights, 'cards': cards})
             db.session.add(new_url)
@@ -814,7 +813,7 @@ def post_highlights(current_user):
             if 'cards' not in server_highlights:
                 cards = client_highlights['cards']
             for highlight in server_highlights:
-                if highlight != = 'cards' and highlight != = 'order' and highlight != = 'orderedCards' and highlight != = 'orderlessCards':
+                if highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
                     if highlights[highlight].user_id == user_collection.user_id:
                         highlights[highlight] = client_highlights[highlight]
                     else:
