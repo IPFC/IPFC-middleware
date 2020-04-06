@@ -715,7 +715,7 @@ def compare_highlights_and_cards(current_user):
     # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
     client_newer = {}
 
-    for url in user_collection['highlight_urls']['list']:
+    for url in user_collection.highlight_urls.list:
         # if client doesn't have a URL
         if url not in client_highlights_meta:
             server_website = Websites.query.filter_by(
