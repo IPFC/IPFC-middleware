@@ -90,7 +90,22 @@ class Decks(db.Model):
         self.deck_length = deck_length
 
 
+class Websites(db.Model):
+    url = db.Column(VARCHAR, primary_key=True)
+    site_owner = db.Column(VARCHAR)
+    cards = db.Column(JSONB)
+    lessons = db.Column(JSONB)
+    highlights = db.Column(JSONB)
+
+    def __init__(self, url, site_owner, cards, lessons, highlights):
+        self.url = url
+        self.site_owner = site_owner
+        self.cards = cards
+        self.lessons = lessons
+        self.highlights = highlights
+
 ### Schemas ###
+
 
 class UserCollectionsSchema(ma.Schema):
     class Meta:
@@ -104,12 +119,20 @@ class DecksSchema(ma.Schema):
                   "deck", "title", "deck_length")
 
 
+class WebsitesSchema(ma.Schema):
+    class Meta:
+        fields = ("url", "site_owner", "cards",
+                  "lessons", "highlights")
+
+
 user_collection_schema = UserCollectionsSchema()
 deck_schema = DecksSchema()
 decks_schema = DecksSchema(many=True)
-
+website_schema = WebsitesSchema()
+websites_schema = WebsitesSchema(many=True)
 
 ### JWT token checker ###
+
 
 def token_required(f):
     @wraps(f)
@@ -314,6 +337,10 @@ def put_user_collection(current_user):
         user_collection.all_deck_cids = data['all_deck_cids']
     if 'webapp_settings' in data:
         user_collection.webapp_settings = data['webapp_settings']
+    if 'extension_settings' in data:
+        user_collection.extension_se    ttings = data['extension_settings']
+    if 'highlight_urls' in data:
+        user_collection.highlight_urls = data['highlight_urls']
 
     db.session.commit()
     return user_collection_schema.dump(user_collection)
@@ -662,6 +689,94 @@ def get_decks_meta(current_user):
             decks_meta.append(deck_meta)
     return jsonify(decks_meta)
 
+# always sync user_collection before this, so that user_collection.highlight_urls is up to date
+@app.route('/compare_highlights_meta', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def compare_highlights_meta(current_user):
+    data = request.get_json()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
+    client_highlights_meta = data['highlights_meta']
+    print("    client_highlights_meta " + client_highlights_meta)
+    server_highlights = {}
+    # these should be full highlights to return to client 
+    # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
+    server_newer_highlights = {}
+    # these can just be in the meta format. 
+    # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
+    client_newer_highlights = {}
+    all_websites = Websites.query.all()
+    print("    all_websites " + all_websites)
+    for website in all_websites:
+        print("    user_collection['highlight_urls']['list'] " +
+              user_collection['highlight_urls']['list'])
+        if website.url is in user_collection['highlight_urls']['list']:
+            print("    website " + website)
+            print("    client_highlights_meta.keys() " +
+                client_highlights_meta.keys())
+            if website.url is not in server_highlights.keys():
+                server_highlights[website.url] = {}
+            for highlight in website.highlights.keys():
+                print("    website.highlights[highlight].user_id " + website.highlights[highlight].user_id)
+                print("    current_user.user_id " + current_user.user_id)
+                if website.highlights[highlight].user_id == current_user.user_id:
+                    print("    server_highlights[website.url][highlight] " + server_highlights[website.url][highlight])
+                    server_highlights[website.url][highlight] = website.highlights[highlight]
+                    print("    website.highlights[highlight] " + website.highlights[highlight])
+    
+    print("    server_highlights " + server_highlights)
+    print("    server_highlights.keys() " + server_highlights.keys())
+    print("    client_highlights_meta.keys() " + client_highlights_meta.keys())
+    for url in server_highlights.keys():
+        for url2 in client_highlights_meta.keys():
+            if url == url2:
+                if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
+                    for highlight in server_highlights[url].keys():
+                        if highlight is not in client_highlights_meta[url].keys():
+                            print(
+                                "    server_highlights[url][highlight] " + server_highlights[url][highlight])
+                            server_newer_highlights[url][highlight] = server_highlights[url][highlight]
+                            print(
+                                "    server_newer_highlights[url][highlight] " + server_newer_highlights[url][highlight])
+                        else:
+                            for highlight_meta in client_highlights_meta[url].keys():
+                                if highlight_meta is not in server_highlights[url].keys():
+                                    client_newer_highlights[url][highlight_meta] = client_highlights_meta[url][highlight_meta]
+                                else:
+                                    if highlight == highlight_meta:
+                                        if client_highlights_meta[url][highlight] > server_highlights[url][highlight]['edited']:
+                                            client_newer_highlights[url][highlight] = client_highlights_meta[url][highlight]
+                                        elif client_highlights_meta[url][highlight] < server_highlights[url][highlight]['edited']:
+                                            server_newer_highlights[url][highlight] = server_highlights[url][highlight]
+    print("    server_newer_highlights" + server_newer_highlights)
+    print("    client_newer_highlights" + client_newer_highlights)
+    sys.stdout.flush()
+    return jsonify({server_newer_highlights: server_newer_highlights, client_newer_highlights: client_newer_highlights})
+
+
+# get website_all
+
+# get website_mine
+
+# get websites_mine_all
+
+# put website_all
+
+# put website_mine
+
+# put websites_mine_all
+
+# post website
+
+# add_highlight
+
+# add_website_card
+
+
+# add_card
+
+# delete_card
 
 if __name__ == '__main__':
     app.run(debug=True)
