@@ -816,7 +816,8 @@ def post_highlights(current_user):
             for highlight in client_highlights:
                 if highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
                     highlights[highlight] = client_highlights[highlight]
-            cards = client_highlights['cards']
+            if client_highlights['cards'] is not None:
+                cards = client_highlights['cards']
             new_url = Websites(url=url, highlights=highlights, cards=cards)
             log('added url', {'highlights': highlights, 'cards': cards})
             db.session.add(new_url)
