@@ -750,17 +750,22 @@ def compare_highlights_and_cards(current_user):
                 # if server has highlights or cards client doesnt, add to server_newer
                 # if client has highlights or cards server doesnt, add to client_newer
                 # otherwise, compare which is newer
-                server_highlight_ids = []
-                client_highlight_ids = []
+                server_highlight_urls = []
+                client_highlight_urls = []
                 for highlight in server_highlights:
-                    server_highlight_ids.append(highlight)
+                    server_highlight_urls.append(highlight)
                 for highlight in client_highlights:
-                    client_highlight_ids.append(highlight)
+                    client_highlight_urls.append(highlight)
+                log('client_highlight_urls', client_highlight_urls)
+                log('server_highlight_urls', server_highlight_urls)
                 for highlight in server_highlights:
-                    if highlight not in client_highlight_ids:
+                    log('highlight', highlight)
+                    if highlight not in client_highlight_urls:
+                        if server_newer[url] is None:
+                            server_newer[url] = {}
                         server_newer[url][highlight] = server_highlights[highlight]
                     for highlight1 in client_highlights:
-                        if highlight not in client_highlight_ids and highlight not in client_newer[url]:
+                        if highlight not in client_highlight_urls and highlight not in client_newer[url]:
                             client_newer[url][highlight] = client_highlights[highlight]
                         elif highlight == highlight1:
                             if highlight == 'cards':
