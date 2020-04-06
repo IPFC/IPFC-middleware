@@ -741,11 +741,11 @@ def compare_highlights_meta(current_user):
     log("    server_highlights ", str(server_highlights))
     log("    client_highlights_meta ",
         str(client_highlights_meta))
-    for url in server_highlights:
-        if url not in client_highlights_meta:
+    for url in client_highlights_meta:
+        if url not in server_highlights:
             client_newer_highlights[url] = client_highlights_meta[url]
         else:
-            for url2 in client_highlights_meta:
+            for url2 in server_highlights:
                 if url == url2:
                     if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
                         for highlight in server_highlights[url]:
