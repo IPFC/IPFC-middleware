@@ -739,7 +739,8 @@ def compare_highlights_meta(current_user):
 
     log("    server_highlights ", server_highlights)
     log("    server_highlights.keys() ", str(server_highlights.keys()))
-    log("    client_highlights_meta.keys() ",str(client_highlights_meta.keys()))
+    log("    client_highlights_meta.keys() ",
+        str(client_highlights_meta.keys()))
     for url in server_highlights.keys():
         for url2 in client_highlights_meta.keys():
             if url == url2:
@@ -765,12 +766,11 @@ def compare_highlights_meta(current_user):
     log("    client_newer_highlights", client_newer_highlights)
     return jsonify({server_newer_highlights: server_newer_highlights, client_newer_highlights: client_newer_highlights})
 
+
 @app.route('/post_highlights', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
-def compare_highlights_meta(current_user):
-    """Compares which is most recent, the server or the client's highlights. 
-    Always sync user_collection before this, so that user_collection.highlight_urls is up to date"""
+def post_highlights(current_user):
     data = request.get_json()
 
 # get website_all
