@@ -352,7 +352,6 @@ def put_user_collection(current_user):
     db.session.commit()
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
-    log('new user collection', user_collection)
     return user_collection_schema.dump(user_collection)
 
 
