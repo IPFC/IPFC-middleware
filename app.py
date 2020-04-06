@@ -764,7 +764,7 @@ def compare_highlights_meta(current_user):
                                             server_newer_highlights[url][highlight] = server_highlights[url][highlight]
     log("    server_newer_highlights", server_newer_highlights)
     log("    client_newer_highlights", client_newer_highlights)
-    return jsonify({server_newer_highlights: json.dumps(server_newer_highlights), client_newer_highlights: json.dumps(client_newer_highlights)})
+    return jsonify({"server_newer_highlights": json.dumps(server_newer_highlights), "client_newer_highlights": json.dumps(client_newer_highlights)})
 
 
 @app.route('/post_highlights', methods=['POST'])
