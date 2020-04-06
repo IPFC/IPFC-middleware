@@ -730,11 +730,14 @@ def compare_highlights_and_cards(current_user):
     log('user_collection.highlight_urls', user_collection.highlight_urls)
     for url in user_collection.highlight_urls['list']:
         # if client doesn't have a URL
-        if url not in client_highlights_meta:
+        log('  client_highlights_meta.keys()',
+            str(client_highlights_meta.keys()))
+        if url not in client_highlights_meta.keys():
             server_website = Websites.query.filter_by(
                 url=url).first()
-            server_newer[url]['highlights'] = server_website.highlights
-            server_newer[url]['cards'] = server_website.cards
+            if server_website is not None:
+                server_newer[url]['highlights'] = server_website.highlights
+                server_newer[url]['cards'] = server_website.cards
         else:
             server_website = Websites.query.filter_by(
                 url=url).first()
