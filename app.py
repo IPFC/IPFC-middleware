@@ -742,26 +742,29 @@ def compare_highlights_meta(current_user):
     log("    client_highlights_meta.keys() ",
         str(client_highlights_meta.keys()))
     for url in server_highlights.keys():
-        for url2 in client_highlights_meta.keys():
-            if url == url2:
-                if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
-                    for highlight in server_highlights[url].keys():
-                        if highlight not in client_highlights_meta[url].keys():
-                            log(
-                                "    server_highlights[url][highlight] ", server_highlights[url][highlight])
-                            server_newer_highlights[url][highlight] = server_highlights[url][highlight]
-                            log(
-                                "    server_newer_highlights[url][highlight] ", server_newer_highlights[url][highlight])
-                        else:
-                            for highlight_meta in client_highlights_meta[url].keys():
-                                if highlight_meta not in server_highlights[url].keys():
-                                    client_newer_highlights[url][highlight_meta] = client_highlights_meta[url][highlight_meta]
-                                else:
-                                    if highlight == highlight_meta:
-                                        if client_highlights_meta[url][highlight] > server_highlights[url][highlight]['edited']:
-                                            client_newer_highlights[url][highlight] = client_highlights_meta[url][highlight]
-                                        elif client_highlights_meta[url][highlight] < server_highlights[url][highlight]['edited']:
-                                            server_newer_highlights[url][highlight] = server_highlights[url][highlight]
+        if url not in client_highlights_meta.keys():
+            client_newer_highlights[url] = client_highlights_meta[url]
+        else:
+            for url2 in client_highlights_meta.keys():
+                if url == url2:
+                    if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
+                        for highlight in server_highlights[url].keys():
+                            if highlight not in client_highlights_meta[url].keys():
+                                log(
+                                    "    server_highlights[url][highlight] ", server_highlights[url][highlight])
+                                server_newer_highlights[url][highlight] = server_highlights[url][highlight]
+                                log(
+                                    "    server_newer_highlights[url][highlight] ", server_newer_highlights[url][highlight])
+                            else:
+                                for highlight_meta in client_highlights_meta[url].keys():
+                                    if highlight_meta not in server_highlights[url].keys():
+                                        client_newer_highlights[url][highlight_meta] = client_highlights_meta[url][highlight_meta]
+                                    else:
+                                        if highlight == highlight_meta:
+                                            if client_highlights_meta[url][highlight] > server_highlights[url][highlight]['edited']:
+                                                client_newer_highlights[url][highlight] = client_highlights_meta[url][highlight]
+                                            elif client_highlights_meta[url][highlight] < server_highlights[url][highlight]['edited']:
+                                                server_newer_highlights[url][highlight] = server_highlights[url][highlight]
     log("    server_newer_highlights", server_newer_highlights)
     log("    client_newer_highlights", client_newer_highlights)
     return jsonify({"server_newer_highlights": json.dumps(server_newer_highlights), "client_newer_highlights": json.dumps(client_newer_highlights)})
