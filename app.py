@@ -190,7 +190,7 @@ def sign_up():
                                          all_deck_cids=[],
                                          webapp_settings={}
                                          )
-        if 'user_collection' in data.keys():
+        if 'user_collection' in data:
             new_collection.schedule = data['user_collection']['schedule']
             new_collection.deleted_deck_ids = data['user_collection']['deleted_deck_ids']
             new_collection.all_deck_cids = data['user_collection']['all_deck_cids']
@@ -721,12 +721,12 @@ def compare_highlights_meta(current_user):
             user_collection['highlight_urls']['list'])
         if website.url in user_collection['highlight_urls']['list']:
             log("    website ", website)
-            log("    client_highlights_meta.keys() ",
-                client_highlights_meta.keys())
-            if website.url not in server_highlights.keys():
+            log("    client_highlights_meta ",
+                client_highlights_meta)
+            if website.url not in server_highlights:
                 server_highlights[website.url] = {
                     "edited": server_highlights[website.url]['edited']}
-            for highlight in website.highlights.keys():
+            for highlight in website.highlights:
                 log(
                     "    website.highlights[highlight].user_id ", website.highlights[highlight].user_id)
                 log("    current_user.user_id ", current_user.user_id)
@@ -738,26 +738,26 @@ def compare_highlights_meta(current_user):
                         "    website.highlights[highlight] ", website.highlights[highlight])
 
     log("    server_highlights ", server_highlights)
-    log("    server_highlights.keys() ", str(server_highlights.keys()))
-    log("    client_highlights_meta.keys() ",
-        str(client_highlights_meta.keys()))
-    for url in server_highlights.keys():
-        if url not in client_highlights_meta.keys():
+    log("    server_highlights ", str(server_highlights))
+    log("    client_highlights_meta ",
+        str(client_highlights_meta))
+    for url in server_highlights:
+        if url not in client_highlights_meta:
             client_newer_highlights[url] = client_highlights_meta[url]
         else:
-            for url2 in client_highlights_meta.keys():
+            for url2 in client_highlights_meta:
                 if url == url2:
                     if server_highlights[url]['edited'] != client_highlights_meta[url]['edited']:
-                        for highlight in server_highlights[url].keys():
-                            if highlight not in client_highlights_meta[url].keys():
+                        for highlight in server_highlights[url]:
+                            if highlight not in client_highlights_meta[url]:
                                 log(
                                     "    server_highlights[url][highlight] ", server_highlights[url][highlight])
                                 server_newer_highlights[url][highlight] = server_highlights[url][highlight]
                                 log(
                                     "    server_newer_highlights[url][highlight] ", server_newer_highlights[url][highlight])
                             else:
-                                for highlight_meta in client_highlights_meta[url].keys():
-                                    if highlight_meta not in server_highlights[url].keys():
+                                for highlight_meta in client_highlights_meta[url]:
+                                    if highlight_meta not in server_highlights[url]:
                                         client_newer_highlights[url][highlight_meta] = client_highlights_meta[url][highlight_meta]
                                     else:
                                         if highlight == highlight_meta:
