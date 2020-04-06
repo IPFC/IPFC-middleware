@@ -789,7 +789,7 @@ def post_highlights(current_user):
         if website.url in user_collection['highlight_urls']['list'] and website.url in highlights:
             log("    website ", website)
             for highlight_id in highlights[website.url]:
-                website.highlights[highlight] = highlights[website.url][highlight_id]
+                website.highlights[highlight_id] = highlights[website.url][highlight_id]
     for url in highlights:
         if url not in server_urls:
             all_websites[url] = highlights[url]
