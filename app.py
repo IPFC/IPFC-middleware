@@ -66,14 +66,18 @@ class UserCollections(db.Model):
     deleted_deck_ids = db.Column(JSONB)
     all_deck_cids = db.Column(JSONB)
     webapp_settings = db.Column(JSONB)
+    extension_settings = db.Column(JSONB)
+    highlight_urls = db.Column(JSONB)
 
-    def __init__(self, user_id, schedule, deck_ids, deleted_deck_ids, all_deck_cids, webapp_settings):
+    def __init__(self, user_id, schedule, deck_ids, deleted_deck_ids, all_deck_cids, webapp_settings, extension_settings, highlight_urls):
         self.user_id = user_id
         self.schedule = schedule
         self.deck_ids = deck_ids
         self.deleted_deck_ids = deleted_deck_ids
         self.all_deck_cids = all_deck_cids
         self.webapp_settings = webapp_settings
+        self.extension_settings = extension_settings
+        self.highlight_urls = highlight_urls
 
 
 class Decks(db.Model):
@@ -116,7 +120,7 @@ class Websites(db.Model):
 class UserCollectionsSchema(ma.Schema):
     class Meta:
         fields = ("user_id", "schedule", "deck_ids", "all_deck_cids",
-                  "deleted_deck_ids", "webapp_settings")
+                  "deleted_deck_ids", "webapp_settings", "extension_settings", "highlight_urls")
 
 
 class DecksSchema(ma.Schema):
