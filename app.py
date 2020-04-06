@@ -769,13 +769,31 @@ def compare_highlights_meta(current_user):
     log("    client_newer_highlights", client_newer_highlights)
     return jsonify({"server_newer_highlights": server_newer_highlights, "client_newer_highlights": client_newer_highlights})
 
-
+# we'll use this for POST and PUT
 @app.route('/post_highlights', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
 def post_highlights(current_user):
+    """Can use this for POST and PUT of highlights. 
+    Make sure to sync user_collection and compare_highlights first"""
     data = request.get_json()
-
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
+    highlights = data['highlights']
+    all_websites = Websites.query.all()
+    server_urls = []
+    for website in all_websites:
+        log("    user_collection['highlight_urls']['list'] ",
+            user_collection['highlight_urls']['list'])
+        server_urls.append(website.url)
+        if website.url in user_collection['highlight_urls']['list'] and website.url in highlights:
+            log("    website ", website)
+            for highlight_id in highlights[website.url]:
+                website.highlights[highlight] = highlights[website.url][highlight_id]
+    for url in highlights:
+        if url not in server_urls:
+            all_websites[url] = highlights[url]
+    return jsonify({"all_websites": all_websites})
 # get website_all
 
 # get website_mine
