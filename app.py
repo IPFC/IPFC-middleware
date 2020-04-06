@@ -689,21 +689,22 @@ def get_decks_meta(current_user):
             decks_meta.append(deck_meta)
     return jsonify(decks_meta)
 
-# always sync user_collection before this, so that user_collection.highlight_urls is up to date
 @app.route('/compare_highlights_meta', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
 def compare_highlights_meta(current_user):
+    """Compares which is most recent, the server or the client's highlights. 
+    Always sync user_collection before this, so that user_collection.highlight_urls is up to date"""
     data = request.get_json()
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
     client_highlights_meta = data['highlights_meta']
     print("    client_highlights_meta " + client_highlights_meta)
     server_highlights = {}
-    # these should be full highlights to return to client 
+    # server_newer_highlights returns full highlights to client. Client can update locally immediately.
     # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
     server_newer_highlights = {}
-    # these can just be in the meta format. 
+    # client_newer_highlights can just be in the meta format. Client must post them on response. 
     # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
     client_newer_highlights = {}
     all_websites = Websites.query.all()
@@ -716,7 +717,7 @@ def compare_highlights_meta(current_user):
             print("    client_highlights_meta.keys() " +
                 client_highlights_meta.keys())
             if website.url is not in server_highlights.keys():
-                server_highlights[website.url] = {}
+                server_highlights[website.url] = { "edited": server_highlights[website.url]['edited'] }
             for highlight in website.highlights.keys():
                 print("    website.highlights[highlight].user_id " + website.highlights[highlight].user_id)
                 print("    current_user.user_id " + current_user.user_id)
