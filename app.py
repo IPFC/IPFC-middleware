@@ -836,7 +836,7 @@ def post_highlights(current_user):
             db.session.add(new_url)
             db.session.commit()
         else:
-            log('server_website', server_website)
+            log('server_website', website_schema.dumps(server_website))
             server_highlights = server_website.highlights
             highlights = {}
             cards = []
