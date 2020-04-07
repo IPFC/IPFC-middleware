@@ -769,8 +769,11 @@ def compare_highlights_and_cards(current_user):
                         server_newer[url][highlight] = server_highlights[highlight]
                     for highlight1 in client_highlights:
                         log('highlight1', highlight1)
-                        if highlight not in client_highlight_ids and highlight not in client_newer[url]:
-                            client_newer[url][highlight] = client_highlights[highlight]
+                        if highlight1 not in server_highlight_ids:
+                            if url not in client_newer:
+                                client_newer[url] = {}
+                            if highlight1 not in client_newer[url]:
+                                client_newer[url][highlight] = client_highlights[highlight]
                         elif highlight == highlight1:
                             if highlight == 'cards':
                                 server_card_ids = []
