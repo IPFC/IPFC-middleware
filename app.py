@@ -720,6 +720,7 @@ def compare_highlights_and_cards(current_user):
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
     client_highlights_meta = data['highlights_meta']
+    log('compare_highlights_and_cards')
     log("    client_highlights_meta ", client_highlights_meta)
     # server_newer returns full highlights to client. Client can update locally immediately.
     # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
@@ -727,11 +728,9 @@ def compare_highlights_and_cards(current_user):
     # client_newer can just be in the meta format. Client must post them on response.
     # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
     client_newer = {}
-    log('user_collection.highlight_urls', user_collection.highlight_urls)
+    # log('user_collection.highlight_urls', user_collection.highlight_urls)
     for url in user_collection.highlight_urls['list']:
         # if client doesn't have a URL
-        log('  client_highlights_meta.keys()',
-            str(client_highlights_meta.keys()))
         if url not in client_highlights_meta.keys():
             server_website = Websites.query.filter_by(
                 url=url).first()
@@ -747,8 +746,8 @@ def compare_highlights_and_cards(current_user):
             else:
                 server_highlights = server_website.highlights
                 client_highlights = client_highlights_meta[url]
-                log('server_highlights', server_highlights)
-                log('client_highlights', client_highlights)
+                # log('server_highlights', server_highlights)
+                # log('client_highlights', client_highlights)
 
                 server_highlight_ids = []
                 client_highlight_ids = []
@@ -756,17 +755,15 @@ def compare_highlights_and_cards(current_user):
                     server_highlight_ids.append(highlight)
                 for highlight in client_highlights:
                     client_highlight_ids.append(highlight)
-                log('client_highlight_ids', client_highlight_ids)
-                log('server_highlight_ids', server_highlight_ids)
+                # log('client_highlight_ids', client_highlight_ids)
+                # log('server_highlight_ids', server_highlight_ids)
                 for highlight in server_highlights:
-                    log('highlight', highlight)
                     # if server has highlights or cards client doesnt, add to server_newer
                     if highlight not in client_highlight_ids:
                         if url not in server_newer:
                             server_newer[url] = {}
                         server_newer[url][highlight] = server_highlights[highlight]
                     for highlight_c in client_highlights:
-                        log('highlight_c', highlight_c)
                         # if client has highlights or cards server doesnt, add to client_newer
                         if highlight_c not in server_highlight_ids:
                             if url not in client_newer:
@@ -804,8 +801,8 @@ def compare_highlights_and_cards(current_user):
                                 elif server_highlights[highlight]['edited'] < client_highlights[highlight]:
                                     client_newer[url][highlight] = client_highlights[url][highlight]
 
-    log("    server_newer ", server_newer)
-    log("    client_newer ", client_newer)
+    # log("    server_newer ", server_newer)
+    # log("    client_newer ", client_newer)
     return jsonify({"server_newer": server_newer, "client_newer": client_newer})
 
 # we'll use this for POST and PUT
