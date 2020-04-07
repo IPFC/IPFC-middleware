@@ -305,7 +305,7 @@ def post_user_collection(current_user):
 def get_meta_and_collection(current_user):
     # might be able to get rid of this later, with better client side controls, or a test during posting,
     def purge_highlights_urls(highlight_urls):
-        purged_highlight_urls = highlight_urls.copy()
+        purged_highlight_urls = []
         for url in highlight_urls:
             website = websites_schema.dump(
                 Websites.query.filter_by(url=url).first())
