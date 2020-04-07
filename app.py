@@ -813,6 +813,7 @@ def post_highlights(current_user):
     """Can use this for POST and PUT of highlights.
     Make sure to sync user_collection so that our highlights_url is up to date, and compare_highlights first"""
     data = request.get_json()
+    log('  data', data)
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
     all_client_highlights = data['highlights']
@@ -835,9 +836,10 @@ def post_highlights(current_user):
             db.session.add(new_url)
             db.session.commit()
         else:
+            log('server_website', server_website)
             server_highlights = server_website.highlights
             highlights = {}
-            cards = server_website.cards
+            cards = []
             if 'cards' not in server_highlights:
                 if 'cards' in client_highlights:
                     cards = client_highlights['cards']
@@ -858,12 +860,10 @@ def post_highlights(current_user):
                     for card in client_highlights['cards']:
                         if card['user_id'] == user_collection.user_id:
                             cards.append(card)
-
-            log('updated entry: url, - ' + url + '  ',
-                {'highlights': highlights, 'cards': cards})
-            db.session.query(Websites).filter(
-                Websites.url == url).update({'highlights': highlights, 'cards': cards
-                                             }, synchronize_session=False)
+            update_info = {'highlights': highlights, 'cards': cards}
+            log('updated entry: url, - ' + url + '  ', update_info)
+            db.session.query(Websites).filter(Websites.url == url).update(
+                update_info, synchronize_session=False)
             db.session.commit()
 
     return jsonify({"200": 'success'})
