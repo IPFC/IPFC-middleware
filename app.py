@@ -311,7 +311,9 @@ def get_meta_and_collection(current_user):
                 Websites.query.filter_by(url=url).first())
             log('website to purge', website)
             if website is not None:
-                if len(website.highlights.keys()) > 0 or len(website.cards) > 0:
+                if 'highlights' not in website and 'cards' not in website:
+                    purged_highlight_urls.append(website.url)
+                elif len(website['highlights'].keys()) > 0 or len(website['cards']) > 0:
                     purged_highlight_urls.append(website.url)
         log('purged_highlight_urls', purged_highlight_urls)
         return purged_highlight_urls
