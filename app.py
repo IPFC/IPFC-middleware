@@ -332,7 +332,8 @@ def get_meta_and_collection(current_user):
         user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
     user_collection = user_collection_schema.dump(user_collection)
-    log(' user_collection['highlight_urls']',  user_collection['highlight_urls'])
+    log("user_collection['highlight_urls']",
+        user_collection['highlight_urls'])
     purged_highlight_urls_list = purge_highlight_urls(
         user_collection['highlight_urls']['list'], current_user.user_id)
     if purged_highlight_urls_list != user_collection['highlight_urls']['list']:
