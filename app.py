@@ -323,7 +323,18 @@ def get_meta_and_collection(current_user):
     user_collection = user_collection_schema.dump(user_collection)
     purged_highlight_urls = purge_highlights_urls(
         user_collection['highlight_urls'])
-    user_collection['highlight_urls'] = purged_highlight_urls
+    if purged_highlight_urls != user_collection['highlight_urls']:
+        user_collection['highlight_urls'] = purged_highlight_urls
+        db.session.query(UserCollections).filter(user_id=current_user.user_id).update({
+            'user_id': user_collection['user_id'],
+            'schedule': user_collection['schedule'],
+            'deck_ids': user_collection['deck_ids'],
+            'deleted_deck_ids': user_collection['deleted_deck_ids'],
+            'all_deck_cids': user_collection['all_deck_cids'],
+            'webapp_settings': user_collection['webapp_settings'],
+            'extension_settings': user_collection['extension_settings'],
+            'highlight_urls': user_collection['highlight_urls'],
+        }, synchronize_session=False)
     return_data = {
         'user_collection': user_collection,
         'decks_meta': []
