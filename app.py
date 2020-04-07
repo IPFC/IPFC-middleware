@@ -305,16 +305,16 @@ def post_user_collection(current_user):
 def get_meta_and_collection(current_user):
     # might be able to get rid of this later, with better client side controls, or a test during posting,
     def purge_highlights_urls(highlight_urls):
-    purged_highlight_urls = highlight_urls.copy()
-    for url in user_collection['highlight_urls']:
-        website = websites_schema.dump(
-            Websites.query.filter_by(url=url).first())
-        log('website to purge', website)
-        if website is not None:
-            if len(website.highlights.keys()) > 0 or len(website.cards) > 0:
-                purged_highlight_urls.append(website.url)
-    log('purged_highlight_urls', purged_highlight_urls)
-    return purged_highlight_urls
+        purged_highlight_urls = highlight_urls.copy()
+        for url in user_collection['highlight_urls']:
+            website = websites_schema.dump(
+                Websites.query.filter_by(url=url).first())
+            log('website to purge', website)
+            if website is not None:
+                if len(website.highlights.keys()) > 0 or len(website.cards) > 0:
+                    purged_highlight_urls.append(website.url)
+        log('purged_highlight_urls', purged_highlight_urls)
+        return purged_highlight_urls
     # check pinata here
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
