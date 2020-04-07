@@ -796,7 +796,7 @@ def compare_highlights_and_cards(current_user):
                                             elif card.edited < card1['edited']:
                                                 client_newer[url]['cards'].append(
                                                     card1)
-                            elif highlight != 'edited' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
+                            elif highlight.startswith('h-id-'):
                                 # remember that the format of server and client is different, server is ORM object, client is dict.
                                 # Server is full highlights, client is meta: { "url":{ "highlight_id": 12341234, "edited": 123123 }}
                                 if server_highlights[highlight]['edited'] > client_highlights[highlight]:
@@ -814,7 +814,7 @@ def compare_highlights_and_cards(current_user):
 @token_required
 def post_highlights(current_user):
     """Can use this for POST and PUT of highlights.
-    Make sure to sync user_collection and compare_highlights first"""
+    Make sure to sync user_collection so that our highlights_url is up to date, and compare_highlights first"""
     data = request.get_json()
     user_collection = UserCollections.query.filter_by(
         user_id=current_user.user_id).first()
@@ -826,10 +826,12 @@ def post_highlights(current_user):
         if server_website is None:
             highlights = {}
             for highlight in client_highlights:
-                if highlight != 'edited' and highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
+                if highlight.startswith('h-id-'):
                     highlights[highlight] = client_highlights[highlight]
-            if client_highlights['cards'] is not None:
+            if 'cards' in client_highlights:
                 cards = client_highlights['cards']
+            else:
+                cards = []
             new_url = Websites(url=url, highlights=highlights,
                                cards=cards, site_owner='', lessons='')
             log('added url', {'highlights': highlights, 'cards': cards})
@@ -837,25 +839,29 @@ def post_highlights(current_user):
             db.session.commit()
         else:
             server_highlights = server_website.highlights
-            # only add cards and highlights with user_id
             highlights = {}
             cards = server_website.cards
             if 'cards' not in server_highlights:
-                cards = client_highlights['cards']
-            for highlight in server_highlights:
-                if highlight != 'edited' and highlight != 'cards' and highlight != 'order' and highlight != 'orderedCards' and highlight != 'orderlessCards':
-                    if highlights[highlight]['user_id'] == user_collection.user_id:
+                if 'cards' in client_highlights:
+                    cards = client_highlights['cards']
+            for highlight in client_highlights:
+                if highlight.startswith('h-id-'):
+                    # only add cards and highlights from client with user's user_id
+                    if client_highlights[highlight]['user_id'] == user_collection.user_id:
                         highlights[highlight] = client_highlights[highlight]
+                    # add other's highlights back in from original
                     else:
                         highlights[highlight] = server_highlights[highlight]
                 elif highlight == 'cards':
-                    for card in server_highlights.cards:
+                    for card in server_highlights['cards']:
+                        # add other's cards back in from original
                         if card['user_id'] != user_collection.user_id:
                             cards.append(card)
-                        for card in client_highlights['cards']:
-                            if card['user_id'] == user_collection.user_id:
-                                cards.append(card)
-            log('updated url, ' + url + '  ',
+                    for card in client_highlights['cards']:
+                        if card['user_id'] == user_collection.user_id:
+                            cards.append(card)
+
+            log('updated entry: url, - ' + url + '  ',
                 {'highlights': highlights, 'cards': cards})
             db.session.query(Websites).filter(
                 Websites.url == url).update({'highlights': highlights, 'cards': cards
