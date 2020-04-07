@@ -304,7 +304,7 @@ def post_user_collection(current_user):
 @token_required
 def get_meta_and_collection(current_user):
     # might be able to get rid of this later, with better client side controls, or a test during posting,
-    def purge_highlights_urls(highlight_urls, user_id):
+    def purge_highlight_urls(highlight_urls, user_id):
         purged_highlight_urls = []
         for url in highlight_urls:
             website = websites_schema.dump(
@@ -331,11 +331,11 @@ def get_meta_and_collection(current_user):
         user_id=current_user.user_id).first()
     deck_ids = user_collection.deck_ids
     user_collection = user_collection_schema.dump(user_collection)
-    purged_highlight_urls = purge_highlights_urls(
+    purged_highlight_urls = purge_highlight_urls(
         user_collection['highlight_urls'], current_user.user_id)
     if purged_highlight_urls != user_collection['highlight_urls']:
         user_collection['highlight_urls'] = purged_highlight_urls
-        db.session.query(UserCollections).filter(user_id=current_user.user_id).update({
+        db.session.query(UserCollections).filter(UserCollections.user_id == current_user.user_id).update({
             'user_id': user_collection['user_id'],
             'schedule': user_collection['schedule'],
             'deck_ids': user_collection['deck_ids'],
