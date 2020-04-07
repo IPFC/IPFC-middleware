@@ -345,6 +345,7 @@ def get_meta_and_collection(current_user):
             'extension_settings': user_collection['extension_settings'],
             'highlight_urls': user_collection['highlight_urls'],
         }, synchronize_session=False)
+        db.session.commit()
     return_data = {
         'user_collection': user_collection,
         'decks_meta': []
