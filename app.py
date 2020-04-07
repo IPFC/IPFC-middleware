@@ -853,10 +853,11 @@ def post_highlights(current_user):
                     else:
                         highlights[highlight] = server_highlights[highlight]
                 elif highlight == 'cards':
-                    for card in server_highlights['cards']:
-                        # add other's cards back in from original
-                        if card['user_id'] != user_collection.user_id:
-                            cards.append(card)
+                    if 'cards' in server_highlights:
+                        for card in server_highlights['cards']:
+                            # add other's cards back in from original
+                            if card['user_id'] != user_collection.user_id:
+                                cards.append(card)
                     for card in client_highlights['cards']:
                         if card['user_id'] == user_collection.user_id:
                             cards.append(card)
