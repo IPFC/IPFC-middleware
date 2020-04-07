@@ -820,7 +820,8 @@ def post_highlights(current_user):
     for url in all_client_highlights:
         client_highlights = all_client_highlights[url]
         # only add cards and highlights with user_id
-        server_website = Websites.query.filter_by(url=url).first()
+        server_website = website_schema.dump(
+            Websites.query.filter_by(url=url).first())
         if server_website is None:
             highlights = {}
             for highlight in client_highlights:
@@ -836,8 +837,9 @@ def post_highlights(current_user):
             db.session.add(new_url)
             db.session.commit()
         else:
-            log('server_website', website_schema.dump(server_website))
-            server_highlights = server_website.highlights
+            log('server_website', server_website)
+            server_highlights = server_website['highlights']
+            server_highlights['cards'] = server_website['cards']
             highlights = {}
             cards = []
             if 'cards' not in server_highlights:
