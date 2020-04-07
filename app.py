@@ -304,16 +304,26 @@ def post_user_collection(current_user):
 @token_required
 def get_meta_and_collection(current_user):
     # might be able to get rid of this later, with better client side controls, or a test during posting,
-    def purge_highlights_urls(highlight_urls):
+    def purge_highlights_urls(highlight_urls, user_id):
         purged_highlight_urls = []
         for url in highlight_urls:
             website = websites_schema.dump(
                 Websites.query.filter_by(url=url).first())
             log('website to purge', website)
-            if website is not None:
+            if website is not None and website != {}:
                 if 'highlights' in website and 'cards' in website:
                     if len(website['highlights'].keys()) > 0 or len(website['cards']) > 0:
-                        purged_highlight_urls['list'].append(website['url'])
+                        mine_count = 0
+                        for card in website['cards']:
+                            if card['card_id'] == user_id:
+                                mine_count += 1
+                        for highlight in website['highlights']:
+                            if highlight.startswith('h-id-'):
+                                if website['highlights'][highlight]['user_id'] == user_id:
+                                    mine_count += 1
+                        if mine_count > 0:
+                            purged_highlight_urls['list'].append(
+                                website['url'])
         log('purged_highlight_urls', purged_highlight_urls)
         return purged_highlight_urls
     # check pinata here
@@ -322,7 +332,7 @@ def get_meta_and_collection(current_user):
     deck_ids = user_collection.deck_ids
     user_collection = user_collection_schema.dump(user_collection)
     purged_highlight_urls = purge_highlights_urls(
-        user_collection['highlight_urls'])
+        user_collection['highlight_urls'], current_user.user_id)
     if purged_highlight_urls != user_collection['highlight_urls']:
         user_collection['highlight_urls'] = purged_highlight_urls
         db.session.query(UserCollections).filter(user_id=current_user.user_id).update({
