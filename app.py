@@ -747,9 +747,6 @@ def compare_highlights_and_cards(current_user):
             else:
                 server_highlights = server_website.highlights
                 client_highlights = client_highlights_meta[url]
-                # if server has highlights or cards client doesnt, add to server_newer
-                # if client has highlights or cards server doesnt, add to client_newer
-                # otherwise, compare which is newer
                 log('server_highlights', server_highlights)
                 log('client_highlights', client_highlights)
 
@@ -763,18 +760,21 @@ def compare_highlights_and_cards(current_user):
                 log('server_highlight_ids', server_highlight_ids)
                 for highlight in server_highlights:
                     log('highlight', highlight)
+                    # if server has highlights or cards client doesnt, add to server_newer
                     if highlight not in client_highlight_ids:
                         if url not in server_newer:
                             server_newer[url] = {}
                         server_newer[url][highlight] = server_highlights[highlight]
-                    for highlight1 in client_highlights:
-                        log('highlight1', highlight1)
-                        if highlight1 not in server_highlight_ids:
+                    for highlight_c in client_highlights:
+                        log('highlight_c', highlight_c)
+                        # if client has highlights or cards server doesnt, add to client_newer
+                        if highlight_c not in server_highlight_ids:
                             if url not in client_newer:
                                 client_newer[url] = {}
-                            if highlight1 not in client_newer[url]:
-                                client_newer[url][highlight] = client_highlights[highlight]
-                        elif highlight == highlight1:
+                            if highlight_c not in client_newer[url]:
+                                client_newer[url][highlight_c] = client_highlights[highlight_c]
+                        # otherwise, compare which is newer
+                        elif highlight == highlight_c:
                             if highlight == 'cards':
                                 server_card_ids = []
                                 client_card_ids = []
