@@ -1,0 +1,221 @@
+# need to add cards comparison
+@app.route('/compare_highlights_and_cards', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def compare_highlights_and_cards(current_user):
+    """Compares which is most recent, the server or the client's highlights.
+    Always sync user_collection before this, so that user_collection.highlight_urls is up to date"""
+    data = request.get_json()
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
+    client_highlights_meta = data['highlights_meta']
+    log('    >>>>>> compare_highlights_and_cards')
+    # log("    client_highlights_meta ", client_highlights_meta)
+    # server_newer returns full highlights to client. Client can update locally immediately.
+    # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
+    server_newer = {}
+    # client_newer can just be in the meta format. Client must post them on response.
+    # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
+    client_newer = {}
+    # log('user_collection.highlight_urls', user_collection.highlight_urls)
+    for url in user_collection.highlight_urls['list']:
+        server_newer[url] = {}
+        client_newer[url] = {}
+        server_website = website_schema.dump(
+            Websites.query.filter_by(url=url).first())
+        # log('server_website',  server_website)
+        # if client doesn't have a URL
+        if url not in client_highlights_meta:
+            # log('client doesnt have a URL, url not in client_highlights_meta. url', url)
+            if server_website is not None:
+                if 'highlights' in server_website:
+                    server_newer[url] = server_website['highlights']
+                if 'cards' in server_website:
+                    server_newer[url]['cards'] = server_website['cards']
+                if 'deleted' in server_website:
+                    server_newer[url]['deleted'] = server_website['deleted']
+        else:
+            # If server doesn't have a URL
+            if server_website is None or server_website == {}:
+                # log('server doesnt have a URL, url not in client_highlights_meta. server_website', server_website)
+                client_newer[url] = client_highlights_meta[url]
+            else:
+                if 'highlights' in server_website:
+                    server_highlights = server_website['highlights']
+                if 'cards' in server_website:
+                    server_highlights['cards'] = server_website['cards']
+                if 'deleted' in server_website:
+                    server_highlights['deleted'] = server_website['deleted']
+                client_website = client_highlights_meta[url]
+                # log('server_highlights', server_highlights)
+                # log('client_website', client_website)
+                # combine deleted lists
+                if 'deleted' in server_highlights:
+                    if server_highlights['deleted'] != []:
+                        if 'deleted' not in client_website:
+                            server_newer['deleted'] = server_highlights['deleted']
+                if 'deleted' in client_website:
+                    if 'deleted' in server_highlights:
+                        if server_highlights['deleted'] != []:
+                            client_newer['deleted'] = client_website['deleted']
+                        else:
+                            client_deleted_cards = []
+                            client_deleted_highlights = []
+                            server_deleted_cards = []
+                            server_deleted_highlights = []
+                            for item in client_website['deleted']:
+                                if 'card_id' in item:
+                                    client_deleted_cards.append(
+                                        item['card_id'])
+                                if 'highlight_id' in item:
+                                    client_deleted_highlights.append(
+                                        item['highlight_id'])
+                            for item in server_highlights['deleted']:
+                                if 'card_id' in item:
+                                    server_deleted_cards.append(
+                                        item['card_id'])
+                                if 'highlight_id' in item:
+                                    server_deleted_highlights.append(
+                                        item['highlight_id'])
+
+                            for item in client_website['deleted']:
+                                if 'card_id' in item:
+                                    if item['card_id'] not in server_deleted_cards:
+                                        client_newer['deleted'].append(item)
+                                if 'highlight_id' in item:
+                                    if item['highlight_id'] not in server_deleted_highlights:
+                                        if 'deleted' not in client_newer:
+                                            client_newer['deleted'] = []
+                                        client_newer['deleted'].append(item)
+                            for item in server_highlights['deleted']:
+                                if 'card_id' in item:
+                                    if item['card_id'] not in client_deleted_cards:
+                                        server_newer['deleted'].append(item)
+                                if 'highlight_id' in item:
+                                    if item['highlight_id'] not in client_deleted_highlights:
+                                        server_newer['deleted'].append(item)
+                server_highlight_ids = []
+                client_highlight_ids = []
+                for highlight in server_highlights:
+                    server_highlight_ids.append(highlight)
+                for highlight in client_website:
+                    client_highlight_ids.append(highlight)
+                # log('client_highlight_ids', client_highlight_ids)
+                # log('server_highlight_ids', server_highlight_ids)
+                for highlight in server_highlights:
+                    # if server has highlights or cards client doesnt, add to server_newer
+                    if highlight not in client_highlight_ids:
+                        server_newer[url][highlight] = server_highlights[highlight]
+                    for highlight_c in client_website:
+                        # if client has highlights or cards server doesnt, add to client_newer
+                        if highlight_c not in server_highlight_ids:
+                            if highlight_c not in client_newer[url]:
+                                client_newer[url][highlight_c] = client_website[highlight_c]
+                        # otherwise, compare which is newer
+                        elif highlight == highlight_c:
+                            if highlight == 'cards':
+                                if 'cards' not in server_newer[url]:
+                                    server_newer[url]['cards'] = []
+                                if 'cards' not in client_newer[url]:
+                                    client_newer[url]['cards'] = []
+                                server_card_ids = []
+                                client_card_ids = []
+                                for card in server_highlights['cards']:
+                                    server_card_ids.append(card['card_id'])
+                                log('client_website', client_website)
+                                for card in client_website['cards']:
+                                    client_card_ids.append(card['card_id'])
+                                # log('server_card_ids', server_card_ids)
+                                # log('client_card_ids', client_card_ids)
+                                for card in server_highlights['cards']:
+                                    if card['card_id'] not in client_card_ids and card not in server_newer[url]['cards']:
+                                        server_newer[url]['cards'].append(card)
+                                    for card_c in client_website['cards']:
+                                        if 'cards' not in client_newer[url]:
+                                            client_newer[url]['cards'] = []
+                                        if card_c['card_id'] not in server_card_ids and card_c['card_id'] not in client_newer[url]['cards']:
+                                            client_newer[url]['cards'].append(
+                                                card_c)
+                                        elif card['card_id'] == card_c['card_id']:
+                                            if card['edited'] > card_c['edited']:
+                                                server_newer[url]['cards'].append(
+                                                    card)
+                                            elif card['edited'] < card_c['edited']:
+                                                client_newer[url]['cards'].append(
+                                                    card_c)
+                                for card_c in client_website['cards']:
+                                    if card_c['card_id'] not in server_card_ids and card_c not in client_newer[url]['cards']:
+                                        client_newer[url]['cards'].append(card)
+                            elif highlight.startswith('h-id-'):
+                                # remember that the format of server and client is different, server is ORM object, client is dict.
+                                # Server is full highlights, client is meta: { "url":{ "highlight_id": 12341234, "edited": 123123 }}
+                                if server_highlights[highlight]['edited'] > client_website[highlight]:
+                                    server_newer[url][highlight] = server_highlights[url][highlight]
+                                elif server_highlights[highlight]['edited'] < client_website[highlight]:
+                                    client_newer[url][highlight] = client_website[url][highlight]
+    # log("    server_newer before ", client_newer)
+    # log("    client_newer before ", server_newer)
+    empties_purged_server_newer = {}
+    for url in server_newer:
+        if server_newer[url] != {} and url.startswith('http'):
+            if 'cards' in server_newer[url]:
+                if server_newer[url]['cards'] == []:
+                    del server_newer[url]['cards']
+            empties_purged_server_newer[url] = server_newer[url]
+    empties_purged_client_newer = {}
+    for url in client_newer:
+        if client_newer[url] != {} and url.startswith('http'):
+            if 'cards' in client_newer[url]:
+                if client_newer[url]['cards'] == []:
+                    del client_newer[url]['cards']
+            empties_purged_client_newer[url] = client_newer[url]
+
+    # log("    server_newer ", empties_purged_client_newer)
+    # log("    client_newer ", empties_purged_server_newer)
+    return jsonify({"server_newer": empties_purged_server_newer, "client_newer": empties_purged_client_newer})
+  def purge_highlight_urls(highlight_urls_list, user_id):
+        purged_highlight_urls_list = []
+        for url in highlight_urls_list:
+            website = website_schema.dump(
+                Websites.query.filter_by(url=url).first())
+            # log('website to purge', website)
+            if website is not None and website != {}:
+                if 'highlights' in website and 'cards' in website:
+                    if len(website['highlights'].keys()) > 0 or len(website['cards']) > 0:
+                        mine_count = 0
+                        for card in website['cards']:
+                            if card['card_id'] == user_id:
+                                mine_count += 1
+                        for highlight in website['highlights']:
+                            if highlight.startswith('h-id-'):
+                                if website['highlights'][highlight]['user_id'] == user_id:
+                                    mine_count += 1
+                        if mine_count > 0:
+                            purged_highlight_urls_list.append(
+                                website['url'])
+        # log('purged_highlight_urls_list', purged_highlight_urls_list)
+        return purged_highlight_urls_list
+    user_collection = user_collection_schema.dump(UserCollections.query.filter_by(
+        user_id=current_user.user_id).first())
+    # log("user_collection['highlight_urls']",
+    #     user_collection['highlight_urls'])
+    if user_collection['highlight_urls'] is None:
+        user_collection['highlight_urls'] = {'list': []}
+    purged_highlight_urls_list = purge_highlight_urls(
+        user_collection['highlight_urls']['list'], current_user.user_id)
+    # log('purged_highlight_urls_list', purged_highlight_urls_list)
+    if purged_highlight_urls_list != user_collection['highlight_urls']['list']:
+        user_collection['highlight_urls']['list'] = purged_highlight_urls_list
+        db.session.query(UserCollections).filter(UserCollections.user_id == current_user.user_id).update({
+            'user_id': user_collection['user_id'],
+            'schedule': user_collection['schedule'],
+            'deck_ids': user_collection['deck_ids'],
+            'deleted_deck_ids': user_collection['deleted_deck_ids'],
+            'all_deck_cids': user_collection['all_deck_cids'],
+            'webapp_settings': user_collection['webapp_settings'],
+            'extension_settings': user_collection['extension_settings'],
+            'highlight_urls': user_collection['highlight_urls'],
+        }, synchronize_session=False)
+        db.session.commit()
+        return jsonify({"highlight_urls": user_collection['highlight_urls']})
+    return jsonify({"200": 'success'})

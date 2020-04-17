@@ -28,9 +28,11 @@ CORS(app)
 
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:/....secret'
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+# Pinata API endpoints
 pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
 
@@ -87,10 +89,10 @@ class Decks(db.Model):
     deck_cid = db.Column(VARCHAR)
     deck = db.Column(JSONB)
     title = db.Column(VARCHAR)
-    deck_length = db.Column(INTEGER)
+    card_count = db.Column(INTEGER)
     # created by?
 
-    def __init__(self, deck_id, edited, deck_cid, deck, title, deck_length):
+    def __init__(self, deck_id, edited, deck_cid, deck, title, card_count):
         self.deck = deck
         # These values are repeated, should be the same as inside the deck, used for
         # Quick access of metadata, without an expensive query of the deck
@@ -98,7 +100,7 @@ class Decks(db.Model):
         self.edited = edited
         self.deck_cid = deck_cid
         self.title = title
-        self.deck_length = deck_length
+        self.card_count = card_count
 
 
 class Websites(db.Model):
@@ -107,13 +109,15 @@ class Websites(db.Model):
     cards = db.Column(JSONB)
     lessons = db.Column(JSONB)
     highlights = db.Column(JSONB)
+    deleted = db.Column(JSONB)
 
-    def __init__(self, url, site_owner, cards, lessons, highlights):
+    def __init__(self, url, site_owner, cards, lessons, highlights, deleted):
         self.url = url
         self.site_owner = site_owner
         self.cards = cards
         self.lessons = lessons
         self.highlights = highlights
+        self.deleted = deleted
 
 ### Schemas ###
 
@@ -127,13 +131,13 @@ class UserCollectionsSchema(ma.Schema):
 class DecksSchema(ma.Schema):
     class Meta:
         fields = ("deck_id", "edited", "deck_cid",
-                  "deck", "title", "deck_length")
+                  "deck", "title", "card_count")
 
 
 class WebsitesSchema(ma.Schema):
     class Meta:
         fields = ("url", "site_owner", "cards",
-                  "lessons", "highlights")
+                  "lessons", "highlights", "deleted")
 
 
 user_collection_schema = UserCollectionsSchema()
@@ -213,7 +217,7 @@ def sign_up():
 @app.route('/login',  methods=['GET'])
 # @cross_origin(origin='*')
 def login():
-    log("    starting login ", str(datetime.datetime.utcnow()))
+    # log("    starting login ", str(datetime.datetime.utcnow()))
     sys.stdout.flush()
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
@@ -300,55 +304,15 @@ def post_user_collection(current_user):
     return user_collection_schema.dump(new_collection)
 
 
-@app.route('/get_meta_and_collection', methods=['GET'])
+@app.route('/get_decks_meta_and_collection', methods=['GET'])
 @cross_origin(origin='*')
 @token_required
-def get_meta_and_collection(current_user):
-    # might be able to get rid of this later, with better client side controls, or a test during posting,
-    def purge_highlight_urls(highlight_urls_list, user_id):
-        purged_highlight_urls_list = []
-        for url in highlight_urls_list:
-            website = websites_schema.dump(
-                Websites.query.filter_by(url=url).first())
-            log('website to purge', website)
-            if website is not None and website != {}:
-                if 'highlights' in website and 'cards' in website:
-                    if len(website['highlights'].keys()) > 0 or len(website['cards']) > 0:
-                        mine_count = 0
-                        for card in website['cards']:
-                            if card['card_id'] == user_id:
-                                mine_count += 1
-                        for highlight in website['highlights']:
-                            if highlight.startswith('h-id-'):
-                                if website['highlights'][highlight]['user_id'] == user_id:
-                                    mine_count += 1
-                        if mine_count > 0:
-                            purged_highlight_urls_list['list'].append(
-                                website['url'])
-        log('purged_highlight_urls_list', purged_highlight_urls_list)
-        return purged_highlight_urls_list
+def get_decks_meta_and_collection(current_user):
+
     # check pinata here
-    user_collection = UserCollections.query.filter_by(
-        user_id=current_user.user_id).first()
-    deck_ids = user_collection.deck_ids
-    user_collection = user_collection_schema.dump(user_collection)
-    log("user_collection['highlight_urls']",
-        user_collection['highlight_urls'])
-    purged_highlight_urls_list = purge_highlight_urls(
-        user_collection['highlight_urls']['list'], current_user.user_id)
-    if purged_highlight_urls_list != user_collection['highlight_urls']['list']:
-        user_collection['highlight_urls']['list'] = purged_highlight_urls_list
-        db.session.query(UserCollections).filter(UserCollections.user_id == current_user.user_id).update({
-            'user_id': user_collection['user_id'],
-            'schedule': user_collection['schedule'],
-            'deck_ids': user_collection['deck_ids'],
-            'deleted_deck_ids': user_collection['deleted_deck_ids'],
-            'all_deck_cids': user_collection['all_deck_cids'],
-            'webapp_settings': user_collection['webapp_settings'],
-            'extension_settings': user_collection['extension_settings'],
-            'highlight_urls': user_collection['highlight_urls'],
-        }, synchronize_session=False)
-        db.session.commit()
+    user_collection = user_collection_schema.dump(UserCollections.query.filter_by(
+        user_id=current_user.user_id).first())
+    deck_ids = user_collection['deck_ids']
     return_data = {
         'user_collection': user_collection,
         'decks_meta': []
@@ -362,7 +326,7 @@ def get_meta_and_collection(current_user):
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id'],
-                'deck_length': dump['deck_length']
+                'card_count': dump['card_count']
             }
             return_data['decks_meta'].append(deck_meta)
 
@@ -461,8 +425,7 @@ def post_deck(current_user):
             title=client_deck['title'],
             edited=client_deck['edited'],
             deck_cid="",
-            deck_length=len(client_deck['cards'])
-
+            card_count=len(client_deck['cards'])
         )
         db.session.add(new_deck)
         db.session.commit()
@@ -515,7 +478,7 @@ def post_decks(current_user):
                 title=client_deck['title'],
                 edited=client_deck['edited'],
                 deck_cid="",
-                deck_length=len(client_deck['cards'])
+                card_count=len(client_deck['cards'])
             )
             db.session.add(new_deck)
             db.session.commit()
@@ -565,7 +528,7 @@ def put_deck(current_user):
         server_deck.deck = client_deck
         server_deck.title = client_deck['title']
         server_deck.edited = client_deck['edited']
-        server_deck.deck_length = len(client_deck['cards'])
+        server_deck.card_count = len(client_deck['cards'])
         db.session.commit()
 
         # then if the pinata version wasn't the newest, upload to pinata
@@ -621,13 +584,13 @@ def put_decks(current_user):
         # check edited date isn't older than one in database, if it is, return newest
         # and data['edited'] > pinata_data['edited']:
         if client_deck['edited'] > server_deck.edited:
-            # https://stackoverflow.com/questions/47735329/updating-a-row-using-sqlalchemy-orm
+            # https:    //stackoverflow.com/questions/47735329/updating-a-row-using-sqlalchemy-orm
             # some weirdness where there is no .update function unless you use .query
             db.session.query(Decks).filter(Decks.deck_id == client_deck['deck_id']).update({
                 'deck': client_deck,
                 'title': client_deck['title'],
                 'edited': client_deck['edited'],
-                'deck_length': len(client_deck['cards'])
+                'card_count': len(client_deck['cards'])
             }, synchronize_session=False)
 
             db.session.commit()
@@ -725,7 +688,7 @@ def get_deck_meta(current_user):
             'edited': dump['edited'],
             'deck_cid': dump['deck_cid'],
             'deck_id': dump['deck_id'],
-            'deck_length': dump['deck_length']
+            'card_count': dump['card_count']
         }
     return jsonify(deck_meta)
 
@@ -746,172 +709,205 @@ def get_decks_meta(current_user):
                 'edited': dump['edited'],
                 'deck_cid': dump['deck_cid'],
                 'deck_id': dump['deck_id'],
-                'deck_length': dump['deck_length']
+                'card_count': dump['card_count']
             }
             decks_meta.append(deck_meta)
     return jsonify(decks_meta)
 
-# need to add cards comparison
-@app.route('/compare_highlights_and_cards', methods=['POST'])
+
+@app.route('/get_websites_meta', methods=['GET'])
 @cross_origin(origin='*')
 @token_required
-def compare_highlights_and_cards(current_user):
-    """Compares which is most recent, the server or the client's highlights.
-    Always sync user_collection before this, so that user_collection.highlight_urls is up to date"""
-    data = request.get_json()
-    user_collection = UserCollections.query.filter_by(
-        user_id=current_user.user_id).first()
-    client_highlights_meta = data['highlights_meta']
-    log('compare_highlights_and_cards')
-    log("    client_highlights_meta ", client_highlights_meta)
-    # server_newer returns full highlights to client. Client can update locally immediately.
-    # { "url":{ "highlight_id": {highlight}, "edited": 123123 }}
-    server_newer = {}
-    # client_newer can just be in the meta format. Client must post them on response.
-    # { "url":{ "highlight_id": 12341234, "edited": 123123 }}
-    client_newer = {}
-    # log('user_collection.highlight_urls', user_collection.highlight_urls)
-    for url in user_collection.highlight_urls['list']:
-        # if client doesn't have a URL
-        if url not in client_highlights_meta.keys():
-            server_website = Websites.query.filter_by(
-                url=url).first()
-            if server_website is not None:
-                server_newer[url]['highlights'] = server_website.highlights
-                server_newer[url]['cards'] = server_website.cards
+def get_websites_meta(current_user):
+    # issue is that its returning deleted cards
+    log('   >>>>>>> get_websites_meta')
+    user_collection = user_collection_schema.dump(
+        UserCollections.query.filter_by(user_id=current_user.user_id).first())
+    # we want to structure this like the 'highlights' object in the extension
+    websites_meta = {}
+    log('highlight_urls', user_collection['highlight_urls'])
+    for url in user_collection['highlight_urls']['list']:
+        website = website_schema.dump(
+            Websites.query.filter_by(url=url).first())
+        if website is None or website == {}:
+            log('website not found', url)
         else:
-            server_website = Websites.query.filter_by(
-                url=url).first()
-            # If server doesn't have a URL
-            if server_website is None:
-                client_newer[url] = client_highlights_meta[url]
-            else:
-                server_highlights = server_website.highlights
-                client_highlights = client_highlights_meta[url]
-                # log('server_highlights', server_highlights)
-                # log('client_highlights', client_highlights)
+            log('website', website)
+            websites_meta[url] = {}
+            if 'cards' in website:
+                websites_meta[url]['cards'] = []
+                for card in website['cards']:
+                    websites_meta[url]['cards'].append(
+                        {'card_id': card['card_id'], 'edited': card['edited'], 'user_id': card['user_id']})
+            if 'deleted' in website:
+                websites_meta[url]['deleted'] = website['deleted']
+            if 'highlights' in website:
+                websites_meta[url]['highlights'] = {}
+                for highlight in website['highlights']:
+                    websites_meta[url]['highlights'][highlight] = {
+                        'edited':  website['highlights'][highlight]['edited'],
+                        'user_id':  website['highlights'][highlight]['user_id']
+                    }
+    return jsonify({'websites_meta': websites_meta})
 
-                server_highlight_ids = []
-                client_highlight_ids = []
-                for highlight in server_highlights:
-                    server_highlight_ids.append(highlight)
-                for highlight in client_highlights:
-                    client_highlight_ids.append(highlight)
-                # log('client_highlight_ids', client_highlight_ids)
-                # log('server_highlight_ids', server_highlight_ids)
-                for highlight in server_highlights:
-                    # if server has highlights or cards client doesnt, add to server_newer
-                    if highlight not in client_highlight_ids:
-                        if url not in server_newer:
-                            server_newer[url] = {}
-                        server_newer[url][highlight] = server_highlights[highlight]
-                    for highlight_c in client_highlights:
-                        # if client has highlights or cards server doesnt, add to client_newer
-                        if highlight_c not in server_highlight_ids:
-                            if url not in client_newer:
-                                client_newer[url] = {}
-                            if highlight_c not in client_newer[url]:
-                                client_newer[url][highlight_c] = client_highlights[highlight_c]
-                        # otherwise, compare which is newer
-                        elif highlight == highlight_c:
-                            if highlight == 'cards':
-                                server_card_ids = []
-                                client_card_ids = []
-                                for card in server_highlights[highlight]:
-                                    server_card_ids.append(card.card_id)
-                                for card in client_highlights[highlight]:
-                                    client_card_ids.append(card['card_id'])
-                                for card in server_highlights[highlight]:
-                                    if card.card_id not in client_card_ids and card.card_id not in server_newer[url]['cards']:
-                                        server_newer[url]['cards'].append(card)
-                                    for card1 in client_highlights[highlight]:
-                                        if card1['card_id'] not in server_card_ids and card1['card_id'] not in client_newer[url]['cards']:
-                                            client_newer[url]['cards'].append(
-                                                card1)
-                                        elif card.card_id == card1['card_id']:
-                                            if card.edited > card1['edited']:
-                                                server_newer[url]['cards'].append(
-                                                    card)
-                                            elif card.edited < card1['edited']:
-                                                client_newer[url]['cards'].append(
-                                                    card1)
-                            elif highlight.startswith('h-id-'):
-                                # remember that the format of server and client is different, server is ORM object, client is dict.
-                                # Server is full highlights, client is meta: { "url":{ "highlight_id": 12341234, "edited": 123123 }}
-                                if server_highlights[highlight]['edited'] > client_highlights[highlight]:
-                                    server_newer[url][highlight] = server_highlights[url][highlight]
-                                elif server_highlights[highlight]['edited'] < client_highlights[highlight]:
-                                    client_newer[url][highlight] = client_highlights[url][highlight]
 
-    # log("    server_newer ", server_newer)
-    # log("    client_newer ", client_newer)
-    return jsonify({"server_newer": server_newer, "client_newer": client_newer})
-
-# we'll use this for POST and PUT
-@app.route('/post_highlights', methods=['POST'])
+@app.route('/get_websites_selected_content', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
-def post_highlights(current_user):
-    """Can use this for POST and PUT of highlights.
-    Make sure to sync user_collection so that our highlights_url is up to date, and compare_highlights first"""
+def get_websites_selected_content(current_user):
+    # also returning deleted cards
+    log('>>>>>> get_websites_selected_content')
     data = request.get_json()
-    log('  data', data)
-    user_collection = UserCollections.query.filter_by(
-        user_id=current_user.user_id).first()
-    all_client_highlights = data['highlights']
-    for url in all_client_highlights:
-        client_highlights = all_client_highlights[url]
-        # only add cards and highlights with user_id
+    results = {}
+    for url in data:
         server_website = website_schema.dump(
             Websites.query.filter_by(url=url).first())
+        # log('server_website', server_website)
+        if server_website is not None and server_website != {}:
+            results[url] = {}
+            client_website = data[url]
+            if 'deleted' in server_website and 'deleted' in client_website:
+                results[url]['deleted'] = []
+                for item in server_website['deleted']:
+                    if item in client_website['deleted']:
+                        results[url]['deleted'].append(item)
+            if 'highlights' in server_website and 'highlights' in client_website:
+                results[url]['highlights'] = {}
+                for highlight_id in server_website['highlights']:
+                    for highlight_id_c in client_website['highlights']:
+                        if highlight_id == highlight_id_c:
+                            results[url]['highlights'][highlight_id] = server_website['highlights'][highlight_id]
+                            break
+            if 'cards' in server_website and 'cards' in client_website:
+                results[url]['cards'] = []
+                for card in server_website['cards']:
+                    for card_c in client_website['cards']:
+                        if card['card_id'] == card_c['card_id']:
+                            results[url]['cards'].append(card)
+                            break
+
+    return jsonify({'websites': results})
+
+# can use this for POST and PUT
+@app.route('/post_websites', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def post_websites(current_user):
+    """Can use this for POST and PUT of highlights.
+    Make sure to sync user_collection so that our highlights_url is up to date, and compare_highlights first"""
+    log('    >>>>>> post_websites')
+    return_message = {}
+
+    def create_new_website(client_website):
+        highlights = {}
+        # log('client_website', client_website)
+        if 'highlights' in client_website:
+            for highlight in client_website['highlights']:
+                if client_website['highlights'][highlight]['user_id'] == user_id:
+                    highlights[highlight] = client_website['highlights'][highlight]
+        cards = []
+        if 'cards' in client_website:
+            for card in client_website['cards']:
+                if card['user_id'] == user_id:
+                    cards.append(card)
+        deleted = []
+        if 'deleted' in client_website:
+            deleted = client_website['deleted']
+
+        new_url = Websites(url=url, highlights=highlights,
+                           cards=cards, site_owner='', lessons={}, deleted=deleted)
+        # log('added url', {'highlights': highlights, 'cards': cards})
+        db.session.add(new_url)
+        db.session.commit()
+        if 'websites added' not in return_message:
+            return_message['websites added'] = {}
+        return_message['websites added'][url] = {
+            'highlights': highlights, 'cards': cards, 'deleted': deleted}
+
+    data = request.get_json()
+    # log('  data', data)
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
+    user_id = user_collection.user_id
+    client_websites = data['websites']
+    for url in client_websites:
+        client_website = client_websites[url]
+        # log('client_website', client_website)
+        server_website = website_schema.dump(
+            Websites.query.filter_by(url=url).first())
+        log('server_website', server_website)
+        log('client_website', client_website)
         if server_website is None:
-            highlights = {}
-            for highlight in client_highlights:
-                if highlight.startswith('h-id-'):
-                    highlights[highlight] = client_highlights[highlight]
-            if 'cards' in client_highlights:
-                cards = client_highlights['cards']
-            else:
-                cards = []
-            new_url = Websites(url=url, highlights=highlights,
-                               cards=cards, site_owner='', lessons='')
-            log('added url', {'highlights': highlights, 'cards': cards})
-            db.session.add(new_url)
-            db.session.commit()
+            create_new_website(client_website)
+        elif server_website == {}:
+            create_new_website(client_website)
         else:
-            log('server_website', server_website)
-            server_highlights = server_website['highlights']
-            server_highlights['cards'] = server_website['cards']
             highlights = {}
             cards = []
-            if 'cards' not in server_highlights:
-                if 'cards' in client_highlights:
-                    cards = client_highlights['cards']
-            for highlight in client_highlights:
-                if highlight.startswith('h-id-'):
-                    # only add cards and highlights from client with user's user_id
-                    if client_highlights[highlight]['user_id'] == user_collection.user_id:
-                        highlights[highlight] = client_highlights[highlight]
-                    # add other's highlights back in from original
-                    else:
-                        highlights[highlight] = server_highlights[highlight]
-                elif highlight == 'cards':
-                    if 'cards' in server_highlights:
-                        for card in server_highlights['cards']:
-                            # add other's cards back in from original
-                            if card['user_id'] != user_collection.user_id:
-                                cards.append(card)
-                    for card in client_highlights['cards']:
-                        if card['user_id'] == user_collection.user_id:
-                            cards.append(card)
-            update_info = {'highlights': highlights, 'cards': cards}
-            log('updated entry: url, - ' + url + '  ', update_info)
-            db.session.query(Websites).filter(Websites.url == url).update(
-                update_info, synchronize_session=False)
-            db.session.commit()
+            deleted = []
+            if 'deleted' in client_website:
+                deleted = client_website['deleted']
+            elif 'deleted' in server_website:
+                deleted = server_website['deleted']
 
-    return jsonify({"200": 'success'})
+            if 'highlights' in server_website:
+                for highlight in server_website['highlights']:
+                    if highlight not in deleted:
+                        highlights[highlight] = server_website['highlights'][highlight]
+            if 'highlights' in client_website:
+                for highlight in client_website['highlights']:
+                    if highlight not in deleted:
+                        if client_website['highlights'][highlight]['user_id'] == user_id:
+                            highlights[highlight] = client_website['highlights'][highlight]
+            client_card_ids = []
+            if 'cards' in client_website:
+                for card in client_website['cards']:
+                    if card['card_id'] not in deleted:
+                        cards.append(card)
+                        client_card_ids.append(card['card_id'])
+            if 'cards' in server_website:
+                for card in server_website['cards']:
+                    if card['card_id'] not in deleted and card['card_id'] not in client_card_ids:
+                        cards.append(card)
+
+            update_info = {'highlights': highlights,
+                           'cards': cards,
+                           'deleted': deleted}
+            # log('updated entry: url, - ' + url + '  ', update_info)
+            db.session.query(Websites).filter(Websites.url == url).update(
+                {'highlights': highlights,
+                 'cards': cards,
+                 'deleted': deleted}, synchronize_session=False)
+            db.session.commit()
+            if 'websites updated' not in return_message:
+                return_message['websites updated'] = {}
+            return_message['websites updated'][url] = {
+                'highlights': highlights, 'cards': cards, 'deleted': deleted}
+
+    return jsonify(return_message)
+
+
+# get_website_highlights_and_cards
+
+# get_website_cards
+
 # get website_all
+@app.route('/get_website', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def get_website(current_user):
+    # also returning deleted cards
+    log('>>>>>> get_website')
+    data = request.get_json()
+    url = data['url']
+    log('data', data)
+    server_website = website_schema.dump(
+        Websites.query.filter_by(url=url).first())
+    log('server_website', server_website)
+    website = {}
+    if server_website is not None and server_website != {}:
+        website = server_website
+    return jsonify({'website': website})
 
 # get website_mine
 
