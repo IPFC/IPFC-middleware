@@ -6,6 +6,7 @@ import uuid
 import bcrypt
 import jwt
 import datetime
+import time
 from functools import wraps
 import os
 import requests
@@ -28,7 +29,7 @@ CORS(app)
 
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:/....secret'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:'
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -508,7 +509,7 @@ def post_decks(current_user):
 def put_deck(current_user):
     client_deck = request.get_json()
     server_deck = Decks.query.filter_by(
-        deck_id=[client_deck['deck_id']]).first()
+        deck_id=client_deck['deck_id']).first()
     pinata_api = current_user.pinata_api
     pinata_key = current_user.pinata_key
     pinata_api_headers = {"Content-Type": "application/json", "pinata_api_key": pinata_api,
@@ -675,6 +676,73 @@ def delete_decks(current_user):
     return jsonify(reply_message)
 
 
+@app.route('/post_card', methods=['POST'])
+@cross_origin(origin='*')
+@token_required
+def post_card(current_user):
+    data = request.get_json()
+    card = data['card']
+    deck_id = data['deck_id']
+    server_deck = Decks.query.filter_by(deck_id=deck_id).first()
+    deck_dump = deck_schema.dump(server_deck)
+    deck = deck_dump['deck']
+    log('deck', deck)
+    deck['cards'].append(card)
+    log('cards after', deck['cards'])
+    now = time.time() * 1000
+    log('edited before', deck['edited'])
+    deck['edited'] = now
+    log('edited after', deck['edited'])
+
+    deck['card_count'] = len(deck['cards'])
+
+    db.session.query(Decks).filter(Decks.deck_id == deck_id).update({
+        'deck': deck,
+        'edited': now,
+        'card_count': len(deck['cards'])
+    }, synchronize_session=False)
+    db.session.commit()
+    server_deck = deck_schema.dump(
+        Decks.query.filter_by(deck_id=deck_id).first())
+    log('server deck after', server_deck)
+    return jsonify({'added card': card})
+
+
+@app.route('/put_card', methods=['PUT'])
+@cross_origin(origin='*')
+@token_required
+def put_card(current_user):
+    data = request.get_json()
+    card = data['card']
+    deck_id = data['deck_id']
+    server_deck = Decks.query.filter_by(deck_id=deck_id).first()
+    deck_dump = deck_schema.dump(server_deck)
+    deck = deck_dump['deck']
+    log('cards before', deck['cards'])
+    for index in range(0, len(deck['cards'])):
+        if deck['cards'][index]['card_id'] == card['card_id']:
+            log('card before', deck['cards'][index])
+            deck['cards'][index] = card
+            log('card after', deck['cards'][index])
+            log('cards after', deck['cards'])
+
+            now = time.time() * 1000
+            deck['edited'] = now
+            deck['card_count'] = len(deck['cards'])
+
+            db.session.query(Decks).filter(Decks.deck_id == deck_id).update({
+                'deck': deck,
+                'edited': now,
+                'card_count': len(deck['cards'])
+            }, synchronize_session=False)
+            db.session.commit()
+            server_deck = deck_schema.dump(
+                Decks.query.filter_by(deck_id=deck_id).first())
+            log('server deck after', server_deck)
+            return jsonify({'updated card': card})
+    return jsonify({'message': 'card not found'})
+
+
 @app.route('/get_deck_meta', methods=['POST'])
 @cross_origin(origin='*')
 @token_required
@@ -725,14 +793,15 @@ def get_websites_meta(current_user):
         UserCollections.query.filter_by(user_id=current_user.user_id).first())
     # we want to structure this like the 'highlights' object in the extension
     websites_meta = {}
-    log('highlight_urls', user_collection['highlight_urls'])
+    # log('highlight_urls', user_collection['highlight_urls'])
     for url in user_collection['highlight_urls']['list']:
         website = website_schema.dump(
             Websites.query.filter_by(url=url).first())
         if website is None or website == {}:
             log('website not found', url)
+            websites_meta[url] = 'website not found'
         else:
-            log('website', website)
+            # log('website', website)
             websites_meta[url] = {}
             if 'cards' in website:
                 websites_meta[url]['cards'] = []
@@ -835,8 +904,8 @@ def post_websites(current_user):
         # log('client_website', client_website)
         server_website = website_schema.dump(
             Websites.query.filter_by(url=url).first())
-        log('server_website', server_website)
-        log('client_website', client_website)
+        # log('server_website', server_website)
+        # log('client_website', client_website)
         if server_website is None:
             create_new_website(client_website)
         elif server_website == {}:
@@ -900,10 +969,10 @@ def get_website(current_user):
     log('>>>>>> get_website')
     data = request.get_json()
     url = data['url']
-    log('data', data)
+    # log('data', data)
     server_website = website_schema.dump(
         Websites.query.filter_by(url=url).first())
-    log('server_website', server_website)
+    # log('server_website', server_website)
     website = {}
     if server_website is not None and server_website != {}:
         website = server_website
@@ -923,12 +992,6 @@ def get_website(current_user):
 
 # add_highlight
 
-# add_website_card
-
-
-# add_card
-
-# delete_card
 
 if __name__ == '__main__':
     app.run(debug=True)
