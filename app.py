@@ -29,7 +29,7 @@ CORS(app)
 
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres'
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -658,20 +658,21 @@ def delete_decks(current_user):
         user_id=current_user.user_id).first()
     data = request.get_json()
     for deck_id in data['deck_ids']:
-        deck = Decks.query.filter_by(deck_id=deck_id).first()
-        if not deck:
-            reply_message['message'] += '    No deck found!: ' + deck_id
-        else:
-            db.session.delete(deck)
-            reply_message['message'] += '    Deck Deleted!: ' + deck_id
-        if deck_id in user_collection.deck_ids:
-            deck_ids_list = user_collection.deck_ids.copy()
-            deck_ids_list.remove(deck_id)
-            user_collection.deck_ids = deck_ids_list
-        if deck_id not in user_collection.deleted_deck_ids:
-            deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
-            deleted_deck_ids_list.append(deck_id)
-            user_collection.deleted_deck_ids = deleted_deck_ids_list
+        if deck_id is not None:
+            deck = Decks.query.filter_by(deck_id=deck_id).first()
+            if not deck:
+                reply_message['message'] += '    No deck found!: ' + deck_id
+            else:
+                db.session.delete(deck)
+                reply_message['message'] += '    Deck Deleted!: ' + deck_id
+            if deck_id in user_collection.deck_ids:
+                deck_ids_list = user_collection.deck_ids.copy()
+                deck_ids_list.remove(deck_id)
+                user_collection.deck_ids = deck_ids_list
+            if deck_id not in user_collection.deleted_deck_ids:
+                deleted_deck_ids_list = user_collection.deleted_deck_ids.copy()
+                deleted_deck_ids_list.append(deck_id)
+                user_collection.deleted_deck_ids = deleted_deck_ids_list
     db.session.commit()
     return jsonify(reply_message)
 
