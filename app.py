@@ -28,8 +28,11 @@ CORS(app)
 
 
 app.config['DEBUG'] = True
+# production
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres'
+# dev
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:'
+
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -72,8 +75,10 @@ class UserCollections(db.Model):
     webapp_settings = db.Column(JSONB)
     extension_settings = db.Column(JSONB)
     highlight_urls = db.Column(JSONB)
+    all_card_tags = db.Column(JSONB)
+    all_deck_tags = db.Column(JSONB)
 
-    def __init__(self, user_id, schedule, deck_ids, deleted_deck_ids, all_deck_cids, webapp_settings, extension_settings, highlight_urls):
+    def __init__(self, user_id, schedule, deck_ids, deleted_deck_ids, all_deck_cids, webapp_settings, extension_settings, highlight_urls, all_card_tags, all_deck_tags):
         self.user_id = user_id
         self.schedule = schedule
         self.deck_ids = deck_ids
@@ -82,6 +87,8 @@ class UserCollections(db.Model):
         self.webapp_settings = webapp_settings
         self.extension_settings = extension_settings
         self.highlight_urls = highlight_urls
+        self.all_card_tags = all_card_tags
+        self.all_deck_tags = all_deck_tags
 
 
 class Decks(db.Model):
@@ -126,7 +133,7 @@ class Websites(db.Model):
 class UserCollectionsSchema(ma.Schema):
     class Meta:
         fields = ("user_id", "schedule", "deck_ids", "all_deck_cids",
-                  "deleted_deck_ids", "webapp_settings", "extension_settings", "highlight_urls")
+                  "deleted_deck_ids", "webapp_settings", "extension_settings", "highlight_urls", "all_card_tags", "all_deck_tags")
 
 
 class DecksSchema(ma.Schema):
@@ -201,15 +208,29 @@ def sign_up():
                                          webapp_settings={},
                                          extension_settings={},
                                          highlight_urls={
+                                             'list': [], 'edited': 0},
+                                         all_card_tags={
+                                             'list': [], 'edited': 0},
+                                         all_deck_tags={
                                              'list': [], 'edited': 0}
                                          )
         if 'user_collection' in data:
-            new_collection.schedule = data['user_collection']['schedule']
-            new_collection.deleted_deck_ids = data['user_collection']['deleted_deck_ids']
-            new_collection.all_deck_cids = data['user_collection']['all_deck_cids']
-            new_collection.webapp_settings = data['user_collection']['webapp_settings']
-            new_collection.extension_settings = data['user_collection']['extension_settings']
-            new_collection.highlight_urls = data['user_collection']['highlight_urls']
+            if 'schedule' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['schedule']
+            if 'deleted_deck_ids' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['deleted_deck_ids']
+            if 'all_deck_cids' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['all_deck_cids']
+            if 'webapp_settings' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['webapp_settings']
+            if 'extension_settings' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['extension_settings']
+            if 'highlight_urls' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['highlight_urls']
+            if 'all_card_tags' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['all_card_tags']
+            if 'all_deck_tags' in data['user_collection']:
+                new_collection.schedule = data['user_collection']['all_deck_tags']
         db.session.add(new_collection)
         db.session.commit()
         return jsonify({'message': 'New user created!'})
@@ -364,8 +385,11 @@ def put_user_collection(current_user):
     if 'extension_settings' in data:
         user_collection.extension_settings = data['extension_settings']
     if 'highlight_urls' in data:
-        log('update highlight_urls', data)
         user_collection.highlight_urls = data['highlight_urls']
+    if 'all_card_tags' in data:
+        user_collection.all_card_tags = data['all_card_tags']
+    if 'all_deck_tags' in data:
+        user_collection.all_deck_tags = data['all_deck_tags']
 
     db.session.commit()
     user_collection = UserCollections.query.filter_by(
@@ -390,11 +414,23 @@ def get_decks(current_user):
     data = request.get_json()
     deck_ids = data
     decks = []
+    not_found = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
         if 'deck' in dump:
             decks.append(dump['deck'])
-    return jsonify(decks)
+        else:
+            log('deck not found: ', deck_id)
+            not_found.append(deck_id)
+            user_collection = UserCollections.query.filter_by(
+                user_id=current_user.user_id).first()
+            collection_dump = user_collection_schema.dump(user_collection)
+            server_deck_ids = collection_dump['deck_ids']
+            user_collection.deck_ids = server_deck_ids
+            del server_deck_ids[server_deck_ids.index(deck_id)]
+            log('server_deck_ids', server_deck_ids)
+            db.session.commit()
+    return jsonify({'decks': decks, 'not_found': not_found})
 
 
 @app.route('/post_deck', methods=['POST'])
@@ -687,22 +723,19 @@ def post_card(current_user):
     server_deck = Decks.query.filter_by(deck_id=deck_id).first()
     deck_dump = deck_schema.dump(server_deck)
     deck = deck_dump['deck']
-    log('deck', deck)
+    #
+    log('deck before', deck)
     deck['cards'].append(card)
-    log('cards after', deck['cards'])
-    now = time.time() * 1000
-    log('edited before', deck['edited'])
+    now = round(time.time() * 1000)
     deck['edited'] = now
-    log('edited after', deck['edited'])
-
     deck['card_count'] = len(deck['cards'])
-
     db.session.query(Decks).filter(Decks.deck_id == deck_id).update({
         'deck': deck,
         'edited': now,
         'card_count': len(deck['cards'])
     }, synchronize_session=False)
     db.session.commit()
+    #
     server_deck = deck_schema.dump(
         Decks.query.filter_by(deck_id=deck_id).first())
     log('server deck after', server_deck)
@@ -719,24 +752,21 @@ def put_card(current_user):
     server_deck = Decks.query.filter_by(deck_id=deck_id).first()
     deck_dump = deck_schema.dump(server_deck)
     deck = deck_dump['deck']
-    log('cards before', deck['cards'])
+    #
+    log('deck before', deck)
     for index in range(0, len(deck['cards'])):
         if deck['cards'][index]['card_id'] == card['card_id']:
-            log('card before', deck['cards'][index])
             deck['cards'][index] = card
-            log('card after', deck['cards'][index])
-            log('cards after', deck['cards'])
-
-            now = time.time() * 1000
+            now = round(time.time() * 1000)
             deck['edited'] = now
             deck['card_count'] = len(deck['cards'])
-
             db.session.query(Decks).filter(Decks.deck_id == deck_id).update({
                 'deck': deck,
                 'edited': now,
                 'card_count': len(deck['cards'])
             }, synchronize_session=False)
             db.session.commit()
+            #
             server_deck = deck_schema.dump(
                 Decks.query.filter_by(deck_id=deck_id).first())
             log('server deck after', server_deck)
