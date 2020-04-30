@@ -31,7 +31,7 @@ app.config['DEBUG'] = True
 # production
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 # dev
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://'
 
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -428,7 +428,7 @@ def get_decks(current_user):
             server_deck_ids = collection_dump['deck_ids']
             user_collection.deck_ids = server_deck_ids
             del server_deck_ids[server_deck_ids.index(deck_id)]
-            log('server_deck_ids', server_deck_ids)
+            # log('server_deck_ids', server_deck_ids)
             db.session.commit()
     return jsonify({'decks': decks, 'not_found': not_found})
 
@@ -724,7 +724,7 @@ def post_card(current_user):
     deck_dump = deck_schema.dump(server_deck)
     deck = deck_dump['deck']
     #
-    log('deck before', deck)
+    # log('deck before', deck)
     deck['cards'].append(card)
     now = round(time.time() * 1000)
     deck['edited'] = now
@@ -738,7 +738,7 @@ def post_card(current_user):
     #
     server_deck = deck_schema.dump(
         Decks.query.filter_by(deck_id=deck_id).first())
-    log('server deck after', server_deck)
+    # log('server deck after', server_deck)
     return jsonify({'added card': card})
 
 
@@ -753,7 +753,7 @@ def put_card(current_user):
     deck_dump = deck_schema.dump(server_deck)
     deck = deck_dump['deck']
     #
-    log('deck before', deck)
+    # log('deck before', deck)
     for index in range(0, len(deck['cards'])):
         if deck['cards'][index]['card_id'] == card['card_id']:
             deck['cards'][index] = card
@@ -769,7 +769,7 @@ def put_card(current_user):
             #
             server_deck = deck_schema.dump(
                 Decks.query.filter_by(deck_id=deck_id).first())
-            log('server deck after', server_deck)
+            # log('server deck after', server_deck)
             return jsonify({'updated card': card})
     return jsonify({'message': 'card not found'})
 
