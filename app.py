@@ -341,15 +341,14 @@ def get_decks_meta_and_collection(current_user):
     for deck_id in deck_ids:
         # getting the whole schema includes the deck. Should update this to only get the meta feilds
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-        if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
-            deck_meta = {
-                'title': dump['title'],
-                'edited': dump['edited'],
-                'deck_cid': dump['deck_cid'],
-                'deck_id': dump['deck_id'],
-                'card_count': dump['card_count']
-            }
-            return_data['decks_meta'].append(deck_meta)
+        deck_meta = {
+            'title': dump['title'],
+            'edited': dump['edited'],
+            'deck_cid': dump['deck_cid'],
+            'deck_id': dump['deck_id'],
+            'card_count': dump['card_count']
+        }
+        return_data['decks_meta'].append(deck_meta)
 
     return jsonify(return_data)
 
@@ -804,15 +803,14 @@ def get_decks_meta(current_user):
     decks_meta = []
     for deck_id in deck_ids:
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
-        if len(dump) > 3:   # this shouldnt be the case, maybe do a check on login that deck colleciton and decks are aligned or empty
-            deck_meta = {
-                'title': dump['title'],
-                'edited': dump['edited'],
-                'deck_cid': dump['deck_cid'],
-                'deck_id': dump['deck_id'],
-                'card_count': dump['card_count']
-            }
-            decks_meta.append(deck_meta)
+        deck_meta = {
+            'title': dump['title'],
+            'edited': dump['edited'],
+            'deck_cid': dump['deck_cid'],
+            'deck_id': dump['deck_id'],
+            'card_count': dump['card_count']
+        }
+        decks_meta.append(deck_meta)
     return jsonify(decks_meta)
 
 
