@@ -29,10 +29,9 @@ CORS(app)
 
 app.config['DEBUG'] = True
 # production
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 # dev
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://'
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://gvzzuizrbhvhan:47efd6af45d4c4d3736d06c2922cf00d17682c237ed8763d0d8b901d9449d169@ec2-107-22-160-185.compute-1.amazonaws.com:5432/d8psd9fqa0qh2b'
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -723,8 +722,11 @@ def post_card(current_user):
     server_deck = Decks.query.filter_by(deck_id=deck_id).first()
     deck_dump = deck_schema.dump(server_deck)
     deck = deck_dump['deck']
-    #
     # log('deck before', deck)
+    for old_card in deck['cards']:
+        if old_card['card_id'] == card['card_id']:
+            return jsonify({'card already exists': card})
+
     deck['cards'].append(card)
     now = round(time.time() * 1000)
     deck['edited'] = now
