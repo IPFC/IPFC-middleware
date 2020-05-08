@@ -744,6 +744,36 @@ def post_card(current_user):
     return jsonify({'added card': card})
 
 
+@app.route('/delete_card', methods=['DELETE'])
+@cross_origin(origin='*')
+@token_required
+def delete_card(current_user):
+    log('   >>>>>>> delete_card')
+    data = request.get_json()
+    deck_id = data['deck_id']
+    card = data['card']
+    deck = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
+    log('deck before', deck)
+    if not deck:
+        return jsonify({'message': 'No deck found!'})
+
+    updated_cards = []
+    for old_card in deck['cards']:
+        if old_card['card_id'] != card['card_id']:
+            updated_cards.append(card)
+    deck['cards'] = updated_cards
+    log('deck after', deck)
+    now = round(time.time() * 1000)
+    db.session.query(Decks).filter(Decks.deck_id == deck_id).update({
+        'deck': deck,
+        'edited': now,
+        'card_count': len(deck['cards'])
+    }, synchronize_session=False)
+
+    db.session.commit()
+    return jsonify({'message': 'Deck deleted!'})
+
+
 @app.route('/put_card', methods=['PUT'])
 @cross_origin(origin='*')
 @token_required
