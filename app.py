@@ -185,6 +185,7 @@ def token_required(f):
 @cross_origin(origin='*')
 def sign_up():
     data = request.get_json()
+    log('     >>>>>>signing up, data', data)
     exists = Users.query.filter_by(email=data['email']).first()
     if exists is not None:
         return jsonify({"error": "Email already exists"})
@@ -217,19 +218,19 @@ def sign_up():
             if 'schedule' in data['user_collection']:
                 new_collection.schedule = data['user_collection']['schedule']
             if 'deleted_deck_ids' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['deleted_deck_ids']
+                new_collection.deleted_deck_ids = data['user_collection']['deleted_deck_ids']
             if 'all_deck_cids' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['all_deck_cids']
+                new_collection.all_deck_cids = data['user_collection']['all_deck_cids']
             if 'webapp_settings' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['webapp_settings']
+                new_collection.webapp_settings = data['user_collection']['webapp_settings']
             if 'extension_settings' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['extension_settings']
+                new_collection.extension_settings = data['user_collection']['extension_settings']
             if 'highlight_urls' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['highlight_urls']
+                new_collection.highlight_urls = data['user_collection']['highlight_urls']
             if 'all_card_tags' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['all_card_tags']
+                new_collection.all_card_tags = data['user_collection']['all_card_tags']
             if 'all_deck_tags' in data['user_collection']:
-                new_collection.schedule = data['user_collection']['all_deck_tags']
+                new_collection.all_deck_tags = data['user_collection']['all_deck_tags']
         db.session.add(new_collection)
         db.session.commit()
         return jsonify({'message': 'New user created!'})
