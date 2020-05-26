@@ -18,20 +18,17 @@ for local testing, download repository, then:
 (or pip3)
 `pip3 install -r requirements.txt`
 
-### comment out this line in app.py
-`app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']`
-### also in app.py change database credentials: (heroku also provides this in resources page)
+### local
+Create an .env file:
+SQLALCHEMY_DATABASE_URI=YOUR_DB_URI
+(heroku provides this in resources page)
   Format:
   `dialect+driver://username:password@host:port/database`
   Example Postgres:
   `postgresql://scott:tiger@localhost/mydatabase`
-
-  # remember to delete secret credentials before uploading to github
-  # remember to change the serverURL in the javascript files
   
 ### run in terminal with
 `python3 app.py`
-
 
 ### bug: AttributeError: module 'bcrypt._bcrypt' has no attribute 'ffi'
 `pip3 uninstall -y -r requirements.txt` 

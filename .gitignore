@@ -1,0 +1,5 @@
+.env.local
+/site-packages/*
+/lib/*
+.vscode
+__pycache__

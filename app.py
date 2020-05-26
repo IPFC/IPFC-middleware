@@ -11,8 +11,10 @@ from functools import wraps
 import os
 import requests
 import json
+from dotenv import load_dotenv
 from flask_cors import CORS, cross_origin
-import sys  # Used to make log statements, add a line after log statement:
+import sys  # Used to make log statements,
+# add a line after log statement:
 # sys.stdout.flush()
 
 # remember to include uswgi, psycopg2, marshmallow-sqlalchemy in reqs.txt, also bcrypt==3.1.7 which pipreqs gets wrong:
@@ -25,16 +27,18 @@ import sys  # Used to make log statements, add a line after log statement:
 app = Flask(__name__)
 ma = Marshmallow(app)
 CORS(app)
-
-
 app.config['DEBUG'] = True
-# production
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-# dev
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://gvzzuizrbhvhan:47efd6af45d4c4d3736d06c2922cf00d17682c237ed8763d0d8b901d9449d169@ec2-107-22-160-185.compute-1.amazonaws.com:5432/d8psd9fqa0qh2b'
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(dotenv_path):
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+        'SQLALCHEMY_DATABASE_URI')
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SECRET_KEY'] = 'totally%@#$%^T@#Secure!'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
 # Pinata API endpoints
 pinata_pin_list = 'https://api.pinata.cloud/data/pinList'
 pinata_json_url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS'
@@ -179,7 +183,13 @@ def token_required(f):
     return decorated
 
 
+@app.route('/')
+@cross_origin(origin='*')
+def welcome():
+    return 'Welcome to the IPFC backend, for more information, visit https://github.com/ipfc'
+
 ### API call routes ###
+
 
 @app.route('/sign_up', methods=['POST'])
 @cross_origin(origin='*')
