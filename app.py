@@ -355,7 +355,6 @@ def get_decks_meta_and_collection(current_user):
     db.session.commit()
     ###
 
-    deck_ids = user_collection['deck_ids']
     return_data = {
         'user_collection': user_collection,
         'decks_meta': []
