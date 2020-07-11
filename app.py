@@ -351,12 +351,12 @@ def get_decks_meta_and_collection(current_user):
         if isinstance(item, str):
             deleted_deck_ids_list.append(item)
     user_collection.deleted_deck_ids = deleted_deck_ids_list
-    user_collection_dump'deleted_deck_ids']= deleted_deck_ids_list
+    user_collection_dump['deleted_deck_ids'] = deleted_deck_ids_list
     db.session.commit()
     ###
 
-    deck_ids= user_collection['deck_ids']
-    return_data= {
+    deck_ids = user_collection['deck_ids']
+    return_data = {
         'user_collection': user_collection,
         'decks_meta': []
     }
