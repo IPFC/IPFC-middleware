@@ -340,12 +340,23 @@ def post_user_collection(current_user):
 @cross_origin(origin='*')
 @token_required
 def get_decks_meta_and_collection(current_user):
-
     # check pinata here
-    user_collection = user_collection_schema.dump(UserCollections.query.filter_by(
-        user_id=current_user.user_id).first())
-    deck_ids = user_collection['deck_ids']
-    return_data = {
+    user_collection = UserCollections.query.filter_by(
+        user_id=current_user.user_id).first()
+    user_collection_dump = user_collection_schema.dump(user_collection)
+
+    # dealing with mysterious null values in the deleted_deck_ids
+    deleted_deck_ids_list = []
+    for item in user_collection_dump['deleted_deck_ids']:
+        if isinstance(item, str):
+            deleted_deck_ids_list.append(item)
+    user_collection.deleted_deck_ids = deleted_deck_ids_list
+    user_collection_dump'deleted_deck_ids']= deleted_deck_ids_list
+    db.session.commit()
+    ###
+
+    deck_ids= user_collection['deck_ids']
+    return_data= {
         'user_collection': user_collection,
         'decks_meta': []
     }
