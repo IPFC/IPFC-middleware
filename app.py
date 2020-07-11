@@ -359,6 +359,7 @@ def get_decks_meta_and_collection(current_user):
         'user_collection': user_collection,
         'decks_meta': []
     }
+    deck_ids = user_collection_dump['deck_ids']
     for deck_id in deck_ids:
         # getting the whole schema includes the deck. Should update this to only get the meta feilds
         dump = deck_schema.dump(Decks.query.filter_by(deck_id=deck_id).first())
