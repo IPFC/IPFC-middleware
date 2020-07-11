@@ -356,7 +356,7 @@ def get_decks_meta_and_collection(current_user):
     ###
 
     return_data = {
-        'user_collection': user_collection,
+        'user_collection': user_collection_dump,
         'decks_meta': []
     }
     deck_ids = user_collection_dump['deck_ids']
